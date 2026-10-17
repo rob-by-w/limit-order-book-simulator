@@ -19,6 +19,23 @@ import heapq
 from orderbook.order import Side
 
 
+def best_price(side_levels, side_heap, side_price_sign):
+    """Return the best live price on one side, or None if it is empty.
+
+    Pops stale heap entries (levels emptied by cancels) as a side effect.
+    side_price_sign is -1 for bids (heap stores negated prices), 1 for asks.
+    """
+
+    while side_heap:
+        current_best_price = side_price_sign * side_heap[0]
+        if current_best_price in side_levels:
+            return current_best_price
+        else:
+            heapq.heappop(side_heap)
+
+    return None
+
+
 class OrderBook:
     def __init__(self):
         self.bid_levels = dict()
@@ -68,3 +85,9 @@ class OrderBook:
             side_levels.pop(order_to_cancel.price)
 
         self.index.pop(order_id)
+
+    def best_bid(self):
+        return best_price(self.bid_levels, self.bid_heap, -1)
+
+    def best_ask(self):
+        return best_price(self.ask_levels, self.ask_heap, 1)

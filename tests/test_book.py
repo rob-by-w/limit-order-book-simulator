@@ -370,3 +370,85 @@ def test_add_same_price_order_after_cancellation(order_ask_1, order_ask_2):
     assert orderbook.ask_levels == {order_ask_2.price: {order_ask_2.id: order_ask_2}}
     assert orderbook.ask_heap == [order_ask_1.price, order_ask_2.price]
     assert orderbook.index == {order_ask_2.id: order_ask_2}
+
+
+def test_best_bid_ask_from_empty_orderbook():
+    orderbook = OrderBook()
+
+    assert orderbook.best_bid() is None
+    assert orderbook.best_ask() is None
+
+
+def test_best_bid_from_orderbook_with_single_bid_order(order_bid_1):
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_1)
+
+    assert orderbook.best_bid() == order_bid_1.price
+    assert orderbook.best_ask() is None
+
+
+def test_best_bid_ask_from_orderbook_with_multiple_levels(order_bid_1, order_bid_2, order_bid_3, order_ask_1,
+                                                          order_ask_2, order_ask_3):
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_1)
+    orderbook.add_order(order_bid_2)
+    orderbook.add_order(order_bid_3)
+    orderbook.add_order(order_ask_1)
+    orderbook.add_order(order_ask_2)
+    orderbook.add_order(order_ask_3)
+
+    assert orderbook.best_bid() == max([order_bid_1.price, order_bid_2.price, order_bid_3.price])
+    assert orderbook.best_ask() == min([order_ask_1.price, order_ask_2.price, order_ask_3.price])
+
+
+def test_best_bid_ask_after_cancellation(order_bid_1, order_bid_3, order_ask_1, order_ask_3):
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_1)
+    orderbook.add_order(order_bid_3)
+    orderbook.add_order(order_ask_1)
+    orderbook.add_order(order_ask_3)
+
+    orderbook.cancel_order(order_bid_1.id)
+    orderbook.cancel_order(order_ask_1.id)
+
+    assert orderbook.best_bid() == order_bid_3.price
+    assert orderbook.best_ask() == order_ask_3.price
+
+
+def test_best_bid_ask_on_stacked_stale_prices_in_heap(order_bid_2, order_bid_3, order_ask_2, order_ask_3):
+    orderbook = OrderBook()
+
+    orderbook.add_order(order_bid_3)
+    orderbook.cancel_order(order_bid_3.id)
+    orderbook.add_order(order_bid_3)
+    orderbook.cancel_order(order_bid_3.id)
+    orderbook.add_order(order_bid_2)
+
+    orderbook.add_order(order_ask_2)
+    orderbook.cancel_order(order_ask_2.id)
+    orderbook.add_order(order_ask_2)
+    orderbook.cancel_order(order_ask_2.id)
+    orderbook.add_order(order_ask_3)
+
+    assert orderbook.best_bid() == order_bid_2.price
+    assert orderbook.best_ask() == order_ask_3.price
+    assert orderbook.bid_heap == [-1 * order_bid_2.price]
+    assert orderbook.ask_heap == [order_ask_3.price]
+
+
+def test_multiple_calls_on_best_bid_ask(order_bid_1, order_bid_3, order_ask_1, order_ask_3):
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_1)
+    orderbook.add_order(order_bid_3)
+    orderbook.add_order(order_ask_1)
+    orderbook.add_order(order_ask_3)
+
+    assert orderbook.best_bid() == order_bid_3.price
+    assert orderbook.bid_heap == [-1 * order_bid_3.price, -1 * order_bid_1.price]
+    assert orderbook.best_bid() == order_bid_3.price
+    assert orderbook.bid_heap == [-1 * order_bid_3.price, -1 * order_bid_1.price]
+
+    assert orderbook.best_ask() == order_ask_1.price
+    assert orderbook.ask_heap == [order_ask_1.price, order_ask_3.price]
+    assert orderbook.best_ask() == order_ask_1.price
+    assert orderbook.ask_heap == [order_ask_1.price, order_ask_3.price]
