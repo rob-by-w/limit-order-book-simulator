@@ -49,3 +49,22 @@ class OrderBook:
             heapq.heappush(side_heap, side_price)
 
         side_levels[order.price][order.id] = order
+
+    def cancel_order(self, order_id):
+        if order_id not in self.index:
+            raise ValueError("Order is not available")
+
+        order_to_cancel = self.index[order_id]
+        if order_to_cancel.side == Side.BID:
+            side_levels = self.bid_levels
+        elif order_to_cancel.side == Side.ASK:
+            side_levels = self.ask_levels
+        else:
+            raise ValueError("Unregistered side, side is not BID or ASK")
+
+        side_levels[order_to_cancel.price].pop(order_id)
+
+        if not side_levels[order_to_cancel.price]:
+            side_levels.pop(order_to_cancel.price)
+
+        self.index.pop(order_id)
