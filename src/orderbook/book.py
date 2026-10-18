@@ -1,18 +1,15 @@
-"""The order book: resting orders organized by side and price level.
+"""The order book: resting limit orders organized by side and price level.
 
-TODO (Milestones 3-4):
-- Store bids and asks so that:
-    * best bid = highest price, best ask = lowest price
-    * orders at the same price are served FIFO (time priority)
-    * cancel by order id is fast
-  Think about the complexity of each operation (add, cancel, best price, depth) for your chosen structures.
-- Operations to support:
-    * add a resting order
-    * cancel by order id (what if the id is unknown or already filled?)
-    * best bid / best ask (what if a side is empty?)
-    * spread (what if one side is empty?)
-    * depth: total quantity at each price level, top N levels per side
-- Keep the invariant in mind: no empty price levels should linger in the book.
+Design notes:
+- Each side keeps a dict of price -> level, where a level is a dict of
+  order id -> Order. Dicts preserve insertion order, so a level is a FIFO
+  queue (time priority) that also supports O(1) cancel by id.
+- Each side also keeps a heap of prices to find the best price quickly.
+  Bid prices are stored negated, because heapq is a min-heap.
+- The levels dict is the source of truth and the heap is only a hint.
+  Cancels never touch the heap (lazy deletion), so it can hold stale or
+  duplicate prices. Lookups discard them as they reach them.
+- An index of order id -> Order lets cancel find an order without scanning.
 """
 import heapq
 
@@ -37,6 +34,13 @@ def _best_price(side_levels, side_heap, side_price_sign):
 
 
 class OrderBook:
+    """Resting orders for one instrument, with price-time priority.
+
+    Supports adding and cancelling orders, best bid/ask, spread, and depth.
+    Prices are integer ticks. Orders are not matched yet: adding a crossing
+    order simply rests it, so the book can be crossed until matching exists.
+    """
+
     def __init__(self):
         self.bid_levels = dict()
         self.ask_levels = dict()
@@ -100,3 +104,26 @@ class OrderBook:
             return None
 
         return current_best_ask - current_best_bid
+
+    def depth(self, side, n):
+        if n <= 0:
+            raise ValueError("Invalid depth level input")
+
+        depth_levels = []
+
+        if side == Side.BID:
+            side_levels = self.bid_levels
+            depth_heap = heapq.nlargest(n, side_levels)
+        elif side == Side.ASK:
+            side_levels = self.ask_levels
+            depth_heap = heapq.nsmallest(n, side_levels)
+        else:
+            raise ValueError("Unregistered side, side is not BID or ASK")
+
+        for price in depth_heap:
+            depth_levels.append(
+                (price,
+                 sum(current_order.remaining_quantity for current_order in side_levels[price].values()))
+            )
+
+        return depth_levels
