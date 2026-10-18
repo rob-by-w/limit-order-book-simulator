@@ -452,3 +452,77 @@ def test_multiple_calls_on_best_bid_ask(order_bid_1, order_bid_3, order_ask_1, o
     assert orderbook.ask_heap == [order_ask_1.price, order_ask_3.price]
     assert orderbook.best_ask() == order_ask_1.price
     assert orderbook.ask_heap == [order_ask_1.price, order_ask_3.price]
+
+
+def test_spread_when_both_sides_are_populated(order_bid_1, order_bid_3, order_ask_1, order_ask_3):
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_1)
+    orderbook.add_order(order_bid_3)
+    orderbook.add_order(order_ask_1)
+    orderbook.add_order(order_ask_3)
+
+    assert orderbook.best_bid() == order_bid_3.price
+    assert orderbook.best_ask() == order_ask_1.price
+    assert orderbook.spread() == 4      # bid_3 = 101, ask_1 = 105
+
+
+def test_spread_when_only_bids_are_available(order_bid_1, order_bid_2):
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_1)
+    orderbook.add_order(order_bid_2)
+
+    assert orderbook.best_bid() == order_bid_1.price
+    assert orderbook.best_ask() is None
+    assert orderbook.spread() is None
+
+
+def test_spread_when_only_asks_are_available(order_ask_1, order_ask_2):
+    orderbook = OrderBook()
+    orderbook.add_order(order_ask_1)
+    orderbook.add_order(order_ask_2)
+
+    assert orderbook.best_bid() is None
+    assert orderbook.best_ask() == order_ask_1.price
+    assert orderbook.spread() is None
+
+
+def test_spread_when_no_orders():
+    orderbook = OrderBook()
+
+    assert orderbook.best_bid() is None
+    assert orderbook.best_ask() is None
+    assert orderbook.spread() is None
+
+
+def test_spread_widen_after_cancelling_higher_bid(order_bid_1, order_bid_3, order_ask_1):
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_1)
+    orderbook.add_order(order_bid_3)
+    orderbook.add_order(order_ask_1)
+
+    assert orderbook.best_bid() == order_bid_3.price
+    assert orderbook.best_ask() == order_ask_1.price
+    assert orderbook.spread() == 4      # bid_3 = 101, ask_1 = 105
+
+    orderbook.cancel_order(order_bid_3.id)
+
+    assert orderbook.best_bid() == order_bid_1.price
+    assert orderbook.best_ask() == order_ask_1.price
+    assert orderbook.spread() == 5      # bid_1 = 100, ask_1 = 105
+
+
+def test_spread_widen_after_cancelling_lower_ask(order_bid_1, order_ask_1, order_ask_3):
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_1)
+    orderbook.add_order(order_ask_1)
+    orderbook.add_order(order_ask_3)
+
+    assert orderbook.best_bid() == order_bid_1.price
+    assert orderbook.best_ask() == order_ask_1.price
+    assert orderbook.spread() == 5      # bid_1 = 100, ask_1 = 105
+
+    orderbook.cancel_order(order_ask_1.id)
+
+    assert orderbook.best_bid() == order_bid_1.price
+    assert orderbook.best_ask() == order_ask_3.price
+    assert orderbook.spread() == 7      # bid_1 = 100, ask_3 = 107
