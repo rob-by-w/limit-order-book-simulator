@@ -255,3 +255,35 @@ def test_trade_is_immutable():
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         trade.quantity = 10
+
+
+def test_new_order_with_no_fill(sample_order):
+    assert sample_order.remaining_quantity == 10  # order_quantity = 10, filled_quantity = 0
+
+
+def test_remaining_quantity_when_constructed_with_fill():
+    order = Order(
+        id="ORD-0002",
+        side=Side.ASK,
+        price=105,
+        order_quantity=15,
+        filled_quantity=7,
+        timestamp=12,
+        seq_number=2
+    )
+
+    assert order.remaining_quantity == 8  # order_quantity = 15, filled_quantity = 7
+
+
+def test_remaining_quantity_after_partial_fill(sample_order):
+    sample_order.filled_quantity = 3
+
+    assert sample_order.filled_quantity == 3
+    assert sample_order.remaining_quantity == 7  # order_quantity = 10, filled_quantity = 3
+
+
+def test_remaining_quantity_after_full_fill(sample_order):
+    sample_order.filled_quantity = 10
+
+    assert sample_order.filled_quantity == 10
+    assert sample_order.remaining_quantity == 0  # order_quantity = 10, filled_quantity = 10

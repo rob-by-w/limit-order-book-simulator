@@ -30,9 +30,9 @@ class Order:
 
     price is an integer number of ticks, not a currency amount.
     order_quantity is the original size and never changes. filled_quantity
-    is how much has executed so far, so the remaining quantity is
-    order_quantity - filled_quantity. Orders at the same price are served
-    in seq_number order (lower first).
+    is how much has executed so far; remaining_quantity is what can still
+    execute. Orders at the same price are served in seq_number order
+    (lower first).
     """
 
     id: str
@@ -55,6 +55,10 @@ class Order:
 
         if self.filled_quantity > self.order_quantity:
             raise ValueError("Filled quantity cannot be greater than order quantity")
+
+    @property
+    def remaining_quantity(self):
+        return self.order_quantity - self.filled_quantity
 
 
 @dataclass(frozen=True)
