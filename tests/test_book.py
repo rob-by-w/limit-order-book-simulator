@@ -703,3 +703,130 @@ def test_depth_with_invalid_side(side, n):
 
     with pytest.raises(ValueError, match=UNKNOWN_SIDE_ERROR_MSG):
         orderbook.depth(side, n)
+
+
+@pytest.mark.parametrize("side", [(Side.BID), (Side.ASK)])
+def test_get_top_order_on_empty_orderbook(side):
+    orderbook = OrderBook()
+
+    assert orderbook.get_top_order(side) is None
+
+
+@pytest.mark.parametrize("order_1, order_2",
+                         [("order_bid_1", "order_bid_2"), ("order_ask_1", "order_ask_2")])
+def test_get_top_order_on_orderbook_with_multiple_orders_at_one_price(order_1, order_2, request):
+    order_1_local = request.getfixturevalue(order_1)
+
+    orderbook = OrderBook()
+
+    orderbook.add_order(order_1_local)
+    orderbook.add_order(request.getfixturevalue(order_2))
+
+    assert orderbook.get_top_order(order_1_local.side) is order_1_local
+
+
+@pytest.mark.parametrize("order_1, order_2",
+                         [("order_bid_1", "order_bid_2"), ("order_ask_1", "order_ask_2")])
+def test_get_top_order_after_top_order_on_same_price_is_cancelled(order_1, order_2, request):
+    order_1_local = request.getfixturevalue(order_1)
+    order_2_local = request.getfixturevalue(order_2)
+
+    orderbook = OrderBook()
+
+    orderbook.add_order(order_1_local)
+    orderbook.add_order(order_2_local)
+
+    assert orderbook.get_top_order(order_1_local.side) is order_1_local
+
+    orderbook.cancel_order(order_1_local.id)
+
+    assert orderbook.get_top_order(order_2_local.side) is order_2_local
+
+
+@pytest.mark.parametrize("order_top_level, order_next_level", [("order_bid_3", "order_bid_1"),
+                                                               ("order_ask_1", "order_ask_3")])
+def test_get_top_order_after_top_level_cancelled(order_top_level, order_next_level, request):
+    order_top_level_local = request.getfixturevalue(order_top_level)
+    order_next_level_local = request.getfixturevalue(order_next_level)
+
+    orderbook = OrderBook()
+    orderbook.add_order(order_top_level_local)
+    orderbook.add_order(order_next_level_local)
+
+    assert orderbook.get_top_order(order_next_level_local.side) is order_top_level_local
+
+    orderbook.cancel_order(order_top_level_local.id)
+
+    assert orderbook.get_top_order(order_next_level_local.side) is order_next_level_local
+
+
+@pytest.mark.parametrize("order_top_level, order_next_level", [("order_bid_3", "order_bid_1"),
+                                                               ("order_ask_1", "order_ask_3")])
+def test_get_top_order_with_stale_heap(order_top_level, order_next_level, request):
+    order_top_level_local = request.getfixturevalue(order_top_level)
+    order_next_level_local = request.getfixturevalue(order_next_level)
+
+    orderbook = OrderBook()
+    orderbook.add_order(order_top_level_local)
+    orderbook.add_order(order_next_level_local)
+
+    orderbook.cancel_order(order_top_level_local.id)
+    orderbook.add_order(order_top_level_local)
+    orderbook.cancel_order(order_top_level_local.id)
+
+    assert orderbook.get_top_order(order_next_level_local.side) is order_next_level_local
+
+
+@pytest.mark.parametrize("order_bid, order_ask, side, expected_output",
+                         [("order_bid_1", "order_ask_1", Side.BID, "order_bid_1"),
+                          ("order_bid_1", "order_ask_1", Side.ASK, "order_ask_1")])
+def test_top_order_on_orderbook_with_both_sides(order_bid, order_ask, side, expected_output, request):
+    order_bid_local = request.getfixturevalue(order_bid)
+    order_ask_local = request.getfixturevalue(order_ask)
+
+    orderbook = OrderBook()
+    orderbook.add_order(order_bid_local)
+    orderbook.add_order(order_ask_local)
+
+    assert orderbook.get_top_order(side) is request.getfixturevalue(expected_output)
+
+
+@pytest.mark.parametrize("order_1, order_2, order_3, expected_heap_output, expected_top_order_output",
+                         [("order_bid_1", "order_bid_2", "order_bid_3", [-101, -100], "order_bid_3"),
+                          ("order_ask_1", "order_ask_2", "order_ask_3", [105, 107], "order_ask_1")])
+def test_multiple_get_top_order_calls(order_1, order_2, order_3, expected_heap_output, expected_top_order_output,
+                                      request):
+    order_1_local = request.getfixturevalue(order_1)
+    order_2_local = request.getfixturevalue(order_2)
+    order_3_local = request.getfixturevalue(order_3)
+
+    orderbook = OrderBook()
+    orderbook.add_order(order_1_local)
+    orderbook.add_order(order_2_local)
+    orderbook.add_order(order_3_local)
+
+    if order_1_local.side == Side.BID:
+        side_levels = orderbook.bid_levels
+        side_heap = orderbook.bid_heap
+    elif order_1_local.side == Side.ASK:
+        side_levels = orderbook.ask_levels
+        side_heap = orderbook.ask_heap
+
+    assert side_levels == {order_1_local.price: {order_1_local.id: order_1_local, order_2_local.id: order_2_local},
+                           order_3_local.price: {order_3_local.id: order_3_local}}
+    assert side_heap == expected_heap_output
+    assert orderbook.get_top_order(order_1_local.side) is request.getfixturevalue(expected_top_order_output)
+
+    assert side_levels == {order_1_local.price: {order_1_local.id: order_1_local, order_2_local.id: order_2_local},
+                           order_3_local.price: {order_3_local.id: order_3_local}}
+    assert side_heap == expected_heap_output
+    assert orderbook.get_top_order(order_1_local.side) is request.getfixturevalue(expected_top_order_output)
+
+
+@pytest.mark.parametrize("side",
+                         [None, 6, "BID"])
+def test_get_top_order_with_invalid_side(side):
+    orderbook = OrderBook()
+
+    with pytest.raises(ValueError, match=UNKNOWN_SIDE_ERROR_MSG):
+        orderbook.get_top_order(side)
