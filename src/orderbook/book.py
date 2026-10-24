@@ -127,3 +127,23 @@ class OrderBook:
             )
 
         return depth_levels
+
+    def get_top_order(self, side):
+        if side == Side.BID:
+            current_best_price = self.best_bid()
+
+            if current_best_price is None:
+                return None
+
+            current_best_level = self.bid_levels[current_best_price]
+        elif side == Side.ASK:
+            current_best_price = self.best_ask()
+
+            if current_best_price is None:
+                return None
+
+            current_best_level = self.ask_levels[current_best_price]
+        else:
+            raise ValueError("Unregistered side, side is not BID or ASK")
+
+        return next(iter(current_best_level.values()))
