@@ -1,0 +1,19 @@
+{
+  "trades": [
+    {"id": "TRD_0001", "buy_order_id": "ORD_0005", "sell_order_id": "ORD_0003", "taker_order_id": "ORD_0005", "price": 104, "quantity": 6, "timestamp": 7},
+    {"id": "TRD_0002", "buy_order_id": "ORD_0002", "sell_order_id": "ORD_0006", "taker_order_id": "ORD_0006", "price": 98, "quantity": 8, "timestamp": 10},
+    {"id": "TRD_0003", "buy_order_id": "ORD_0001", "sell_order_id": "ORD_0006", "taker_order_id": "ORD_0006", "price": 95, "quantity": 3, "timestamp": 10},
+    {"id": "TRD_0004", "buy_order_id": "ORD_0007", "sell_order_id": "ORD_0004", "taker_order_id": "ORD_0007", "price": 104, "quantity": 6, "timestamp": 15}
+  ],
+  "rejected_rows": [
+    {"line": 4, "reason": "duplicate_order_id"},
+    {"line": 6, "reason": "duplicate_order_id"},
+    {"line": 10, "reason": "missing_side"},
+    {"line": 12, "reason": "order_not_found"},
+    {"line": 13, "reason": "order_not_found"},
+    {"line": 16, "reason": "invalid_price"},
+    {"line": 17, "reason": "unsupported_event_type"}
+  ],
+  "final_bid_depth": [[105, 24], [95, 12]],
+  "final_ask_depth": [[106, 8]]
+}
