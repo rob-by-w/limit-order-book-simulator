@@ -75,11 +75,13 @@ def read_order_flow_csv(order_flow_csv):
     with open(order_flow_csv, newline='') as order_flow_file:
         order_reader = csv.DictReader(order_flow_file)
 
-        if order_reader.fieldnames != required_fields:
-            missing_fields = list(set(required_fields) - set(order_reader.fieldnames if order_reader.fieldnames else []))
+        if len(order_reader.fieldnames) != len(set(order_reader.fieldnames)):
+            raise KeyError(f"Order flow csv has duplicate fields: {', '.join([field for field in order_reader.fieldnames if order_reader.fieldnames.count(field) > 1])}")
+
+        if not (set(order_reader.fieldnames) >= set(required_fields)):
             raise KeyError(
                 f"Missing fields in order flow csv: "
-                f"{', '.join([field for field in required_fields if field in missing_fields])}")
+                f"{', '.join([field for field in required_fields if field not in order_reader.fieldnames])}")
 
         for row in order_reader:
             output.append((order_reader.line_num, create_event(row)))
@@ -156,4 +158,3 @@ def create_event(event_row):
         )
     else:
         return Rejection(RejectionCode.UNSUPPORTED_EVENT_TYPE)
-

@@ -6,6 +6,7 @@ from orderbook.events import New, Cancel, read_order_flow_csv, create_event, Rej
 from orderbook.order import Side
 
 MISSING_COLUMN_ERROR_MSG = "Missing fields in order flow csv: "
+DUPLICATE_COLUMN_ERROR_MSG = "Order flow csv has duplicate fields: "
 
 
 @pytest.fixture
@@ -282,6 +283,57 @@ def test_file_with_missing_column(tmp_path: Path):
     file_path.write_text('\n'.join(order_flow))
 
     with pytest.raises(KeyError, match=MISSING_COLUMN_ERROR_MSG + 'timestamp'):
+        output = read_order_flow_csv(file_path)
+
+
+def test_file_with_swapped_column(tmp_path: Path):
+    order_flow = ["event_type,side,price,quantity,timestamp,order_id",
+                  "NEW,BID,95,15,1,ORD_0001",
+                  "NEW,BID,98,8,3,ORD_0002",
+                  "NEW,ASK,104,16,4,ORD_0003",
+                  "CANCEL,,,,10,ORD_0003"
+                  ]
+
+    file_path = tmp_path / 'order_flow_sample.csv'
+    file_path.write_text('\n'.join(order_flow))
+    output = read_order_flow_csv(file_path)
+
+    assert output[0] == (2, New("ORD_0001", Side.BID, 95, 15, 1))
+    assert output[1] == (3, New("ORD_0002", Side.BID, 98, 8, 3))
+    assert output[2] == (4, New("ORD_0003", Side.ASK, 104, 16, 4))
+    assert output[3] == (5, Cancel("ORD_0003", 10))
+
+
+def test_file_with_extra_column(tmp_path: Path):
+    order_flow = ["event_type,order_id,side,price,quantity,timestamp,notes",
+                  "NEW,ORD_0001,BID,95,15,1,New order",
+                  "NEW,ORD_0002,BID,98,8,3,",
+                  "NEW,ORD_0003,ASK,104,16,4,Test",
+                  "CANCEL,ORD_0003,,,,10,Test"
+                  ]
+
+    file_path = tmp_path / 'order_flow_sample.csv'
+    file_path.write_text('\n'.join(order_flow))
+    output = read_order_flow_csv(file_path)
+
+    assert output[0] == (2, New("ORD_0001", Side.BID, 95, 15, 1))
+    assert output[1] == (3, New("ORD_0002", Side.BID, 98, 8, 3))
+    assert output[2] == (4, New("ORD_0003", Side.ASK, 104, 16, 4))
+    assert output[3] == (5, Cancel("ORD_0003", 10))
+
+
+def test_file_with_duplicate_column(tmp_path: Path):
+    order_flow = ["event_type,order_id,price,side,price,quantity,timestamp",
+                  "NEW,ORD_0001,98,BID,95,15,1,",
+                  "NEW,ORD_0002,99,BID,98,8,3",
+                  "NEW,ORD_0003,103,ASK,104,16,4",
+                  "CANCEL,ORD_0003,,,,,10"
+                  ]
+
+    file_path = tmp_path / 'order_flow_sample.csv'
+    file_path.write_text('\n'.join(order_flow))
+
+    with pytest.raises(KeyError, match=DUPLICATE_COLUMN_ERROR_MSG + 'price'):
         output = read_order_flow_csv(file_path)
 
 
