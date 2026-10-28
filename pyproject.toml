@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "orderbook"
 version = "0.0.1"
 description = "A limit order book simulator with price-time priority matching"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [tool.setuptools.packages.find]
 where = ["src"]
