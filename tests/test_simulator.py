@@ -18,7 +18,7 @@ def test_add_new_order(simulator):
 
     assert simulator_result.trades == []
     assert simulator_result.rejections == []
-    assert simulator_result.final_book_state == [[(95,15)], []]
+    assert simulator_result.final_book_state == {Side.BID: [(95,15)], Side.ASK: []}
 
 def test_cancel_resting_order(simulator):
     events = [
@@ -30,4 +30,4 @@ def test_cancel_resting_order(simulator):
 
     assert simulator_result.trades == []
     assert simulator_result.rejections == []
-    assert simulator_result.final_book_state == [[], []]
+    assert simulator_result.final_book_state == {Side.BID: [], Side.ASK: []}

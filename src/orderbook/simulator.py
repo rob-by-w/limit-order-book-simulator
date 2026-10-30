@@ -19,7 +19,7 @@ from orderbook.order import Trade, Order, Side
 class SimulationResult:
     trades: list[Trade] = field(default_factory=list)
     rejections: list[Rejection] = field(default_factory=list)
-    final_book_state: list[tuple] = field(default_factory=list)
+    final_book_state: dict = field(default_factory=dict)
 
 
 class Simulator:
@@ -39,7 +39,10 @@ class Simulator:
         return SimulationResult(
             trades=[],
             rejections=[],
-            final_book_state=[self.order_book.depth(Side.BID, 5), self.order_book.depth(Side.ASK, 5)],
+            final_book_state={
+                Side.BID: self.order_book.depth(Side.BID, 5),
+                Side.ASK: self.order_book.depth(Side.ASK, 5)
+            },
         )
 
     def _handle_new(self, new_order_event: New) -> Order:
