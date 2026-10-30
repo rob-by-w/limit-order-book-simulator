@@ -1,7 +1,7 @@
 import pytest
 
 from orderbook.events import New, Cancel
-from orderbook.simulator import Simulator, SimulationResult
+from orderbook.simulator import Simulator, SimulationResult, RejectedEvent, BusinessRejectionCode
 from orderbook.order import Side
 
 @pytest.fixture
@@ -30,4 +30,15 @@ def test_cancel_resting_order(simulator):
 
     assert simulator_result.trades == []
     assert simulator_result.rejections == []
+    assert simulator_result.final_book_state == {Side.BID: [], Side.ASK: []}
+
+def test_cancel_unknown_order(simulator):
+    events = [
+        (2, Cancel("ORD_0001", 2))
+    ]
+
+    simulator_result = simulator.run(events)
+
+    assert simulator_result.trades == []
+    assert simulator_result.rejections == [RejectedEvent(2, BusinessRejectionCode.UNKNOWN_ORDER_ID)]
     assert simulator_result.final_book_state == {Side.BID: [], Side.ASK: []}

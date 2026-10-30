@@ -8,11 +8,22 @@ TODO (Milestone 6):
 - Provide a command-line entry point that takes a path to a sample stream in data/.
 """
 from dataclasses import dataclass, field
+from enum import StrEnum
 
-from orderbook.book import OrderBook
-from orderbook.events import New, Cancel, Rejection
+from orderbook.book import OrderBook, UnknownOrderError
+from orderbook.events import New, Cancel, Rejection, RejectionCode
 from orderbook.matching import MatchingEngine
 from orderbook.order import Trade, Order, Side
+
+
+class BusinessRejectionCode(StrEnum):
+    UNKNOWN_ORDER_ID = "unknown_order_id"
+
+
+@dataclass(frozen=True)
+class RejectedEvent:
+    line_number: int
+    reason: BusinessRejectionCode | RejectionCode
 
 
 @dataclass
@@ -29,16 +40,21 @@ class Simulator:
         self.order_sequence_number = 1
 
     def run(self, events: list[tuple[int, New | Cancel | Rejection]]) -> SimulationResult:
+        rejection_list = []
+
         for line_number, event in events:
             match event:
                 case New():
                     self.matching_engine.submit(self._handle_new(event))
                 case Cancel():
-                    self.order_book.cancel_order(self._handle_cancel(event))
+                    try:
+                        self.order_book.cancel_order(self._handle_cancel(event))
+                    except UnknownOrderError:
+                        rejection_list.append(self._handle_reject(line_number, BusinessRejectionCode.UNKNOWN_ORDER_ID))
 
         return SimulationResult(
             trades=[],
-            rejections=[],
+            rejections=rejection_list,
             final_book_state={
                 Side.BID: self.order_book.depth(Side.BID, 5),
                 Side.ASK: self.order_book.depth(Side.ASK, 5)
@@ -59,3 +75,6 @@ class Simulator:
 
     def _handle_cancel(self, cancel_event: Cancel) -> str:
         return cancel_event.id
+
+    def _handle_reject(self, line_num, rejection_reason) -> RejectedEvent:
+        return RejectedEvent(line_num, rejection_reason)
