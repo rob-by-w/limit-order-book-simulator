@@ -1,10 +1,25 @@
-"""Input events: the messages that drive the simulator.
+"""Parse an order-flow CSV into typed events (New, Cancel, Rejection).
 
-TODO (Milestone 6):
-- Define event types: NEW, CANCEL, (later) MODIFY.
-- Decide what fields each event carries (e.g. NEW needs side/price/qty/id; CANCEL needs only an id).
-- Define the input file format (CSV or JSON lines) and write a parser from raw rows to events.
-- Edge cases: malformed rows, unknown event types, bad numbers. Fail loudly or skip? Justify the choice.
+Required columns, in any order: event_type, order_id, side, price, quantity,
+timestamp. Extra columns are ignored.
+
+Events:
+- NEW: needs order_id, side (BID/ASK), price, quantity, timestamp.
+- CANCEL: needs order_id and timestamp only.
+- Anything else (including MODIFY, for now) is rejected as unsupported.
+
+Normalization: fields are stripped, and whitespace-only counts as missing.
+event_type and side are case-insensitive; order_id keeps its case.
+
+Validation: price is any integer (zero and negative allowed, for spread
+products like calendar rolls); quantity >= 1; timestamp >= 0.
+
+Errors: a missing file or header column raises (nothing in the file can be
+trusted). A bad row becomes a Rejection with a RejectionCode and parsing
+continues.
+
+Returns a list of (line_number, event) tuples. line_number is the physical
+file line (header is line 1), so blank lines don't shift it.
 """
 import csv
 import re
