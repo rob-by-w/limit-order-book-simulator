@@ -1,11 +1,11 @@
 import pytest
 
 from orderbook.order import Order, Side
-from orderbook.book import OrderBook
+from orderbook.book import OrderBook, UnknownOrderError
 
 DUPLICATE_ORDER_ID_ERROR_MSG = "Duplicate order ID"
 UNKNOWN_SIDE_ERROR_MSG = "Unregistered side, side is not BID or ASK"
-UNKNOWN_CANCEL_ID_ERROR_MSG = "Order is not available"
+UNKNOWN_CANCEL_ID_ERROR_MSG = "No such order"
 INVALID_DEPTH_LEVEL_ERROR_MSG = "Invalid depth level input"
 
 
@@ -303,7 +303,7 @@ def test_cancel_unknown_order_id(order_bid_1, order_bid_3):
     orderbook = OrderBook()
     orderbook.add_order(order_bid_1)
 
-    with pytest.raises(ValueError, match=UNKNOWN_CANCEL_ID_ERROR_MSG):
+    with pytest.raises(UnknownOrderError, match=UNKNOWN_CANCEL_ID_ERROR_MSG):
         orderbook.cancel_order(order_bid_3.id)
 
     assert orderbook.bid_levels == {order_bid_1.price: {order_bid_1.id: order_bid_1}}
@@ -316,7 +316,7 @@ def test_cancel_same_order_twice(order_ask_1):
     orderbook.add_order(order_ask_1)
     orderbook.cancel_order(order_ask_1.id)
 
-    with pytest.raises(ValueError, match=UNKNOWN_CANCEL_ID_ERROR_MSG):
+    with pytest.raises(UnknownOrderError, match=UNKNOWN_CANCEL_ID_ERROR_MSG):
         orderbook.cancel_order(order_ask_1.id)
 
     assert orderbook.ask_levels == {}

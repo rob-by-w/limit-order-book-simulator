@@ -16,6 +16,10 @@ import heapq
 from orderbook.order import Side
 
 
+class UnknownOrderError(Exception):
+    pass
+
+
 def _best_price(side_levels, side_heap, side_price_sign):
     """Return the best live price on one side, or None if it is empty.
 
@@ -73,7 +77,7 @@ class OrderBook:
 
     def cancel_order(self, order_id):
         if order_id not in self.index:
-            raise ValueError("Order is not available")
+            raise UnknownOrderError("No such order")
 
         order_to_cancel = self.index[order_id]
         if order_to_cancel.side == Side.BID:
