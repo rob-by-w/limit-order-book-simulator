@@ -50,6 +50,13 @@ class Rejection:
     reason: RejectionCode
 
 
+def normalize_field_value(raw_value, upper=False):
+    if raw_value is None:
+        return ""
+
+    return str(raw_value).strip().upper() if upper else str(raw_value).strip()
+
+
 def is_valid_integer(input_string, minimum_value=None):
     if re.fullmatch(r'^[+-]?[0-9]+$', str(input_string)):
         output = int(input_string)
@@ -76,7 +83,9 @@ def read_order_flow_csv(order_flow_csv):
         order_reader = csv.DictReader(order_flow_file)
 
         if len(order_reader.fieldnames) != len(set(order_reader.fieldnames)):
-            raise KeyError(f"Order flow csv has duplicate fields: {', '.join([field for field in order_reader.fieldnames if order_reader.fieldnames.count(field) > 1])}")
+            raise KeyError(
+                f"Order flow csv has duplicate fields: "
+                f"{', '.join([field for field in order_reader.fieldnames if order_reader.fieldnames.count(field) > 1])}")
 
         if not (set(order_reader.fieldnames) >= set(required_fields)):
             raise KeyError(
@@ -90,17 +99,17 @@ def read_order_flow_csv(order_flow_csv):
 
 
 def create_event(event_row):
-    event_type = event_row['event_type']
-    event_order_id = event_row['order_id']
-    event_side = event_row['side']
-    event_price = event_row['price']
-    event_quantity = event_row['quantity']
-    event_timestamp = event_row['timestamp']
+    event_type = normalize_field_value(event_row['event_type'], True)
+    event_order_id = normalize_field_value(event_row['order_id'], False)
+    event_side = normalize_field_value(event_row['side'], True)
+    event_price = normalize_field_value(event_row['price'])
+    event_quantity = normalize_field_value(event_row['quantity'])
+    event_timestamp = normalize_field_value(event_row['timestamp'])
 
     if not event_type:
         return Rejection(RejectionCode.MISSING_EVENT_TYPE)
 
-    if str(event_type).upper() not in ["NEW", "CANCEL"]:
+    if event_type not in ["NEW", "CANCEL"]:
         return Rejection(RejectionCode.UNSUPPORTED_EVENT_TYPE)
 
     if not event_order_id:
@@ -109,20 +118,17 @@ def create_event(event_row):
     if not event_timestamp:
         return Rejection(RejectionCode.MISSING_TIMESTAMP)
     else:
-        if is_valid_integer(str(event_timestamp).strip(), 0):
+        if is_valid_integer(event_timestamp, 0):
             event_timestamp = int(event_timestamp)
 
         else:
             return Rejection(RejectionCode.INVALID_TIMESTAMP)
 
-    if event_type.strip().upper() == 'NEW':
+    if event_type == 'NEW':
         if not event_side:
             return Rejection(RejectionCode.MISSING_SIDE)
         else:
-            if not isinstance(event_side, str):
-                return Rejection(RejectionCode.INVALID_SIDE)
-
-            if event_side.strip().upper() not in ["BID", "ASK"]:
+            if event_side not in ["BID", "ASK"]:
                 return Rejection(RejectionCode.INVALID_SIDE)
 
             event_side = Side.BID if event_side.strip().upper() == "BID" else Side.ASK
@@ -130,7 +136,7 @@ def create_event(event_row):
         if not event_price:
             return Rejection(RejectionCode.MISSING_PRICE)
         else:
-            if is_valid_integer(str(event_price).strip()):
+            if is_valid_integer(event_price):
                 event_price = int(event_price)
             else:
                 return Rejection(RejectionCode.INVALID_PRICE)
@@ -138,22 +144,22 @@ def create_event(event_row):
         if not event_quantity:
             return Rejection(RejectionCode.MISSING_QUANTITY)
         else:
-            if is_valid_integer(str(event_quantity).strip(), 1):
+            if is_valid_integer(event_quantity, 1):
                 event_quantity = int(event_quantity)
 
             else:
                 return Rejection(RejectionCode.INVALID_QUANTITY)
 
         return New(
-            id=event_order_id.strip(),
+            id=event_order_id,
             side=event_side,
             price=event_price,
             order_quantity=event_quantity,
             timestamp=event_timestamp
         )
-    elif event_type.strip().upper() == 'CANCEL':
+    elif event_type == 'CANCEL':
         return Cancel(
-            id=event_order_id.strip(),
+            id=event_order_id,
             timestamp=event_timestamp,
         )
     else:

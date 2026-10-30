@@ -337,6 +337,36 @@ def test_file_with_duplicate_column(tmp_path: Path):
         output = read_order_flow_csv(file_path)
 
 
+def test_file_with_non_normalized_column(tmp_path: Path):
+    order_flow = ["event_type,order_id,side,price,quantity,timestamp",
+                  " NEW,ORD_0001,BID,95,15,1",
+                  "new   ,ORD_0002,BID,98,8,3",
+                  "NEW,        ,ASK,104,16,4",
+                  "NEW,ORD_0004,bid,96,8,6",
+                  "NEW,ORD_0005,BID,96  ,8,6",
+                  "NEW,ORD_0006,BID,96, 8 ,6    ",
+                  "NEW,ORD_0007,ASK,100,8,   ",
+                  " new ,ORD_0010  , ask, 103,5   ,7   ",
+                  "caNCeL,  ORD_0003, , ,   ,10   ",
+                  "NEW,Ord_0015,BID,96  ,8,12",
+                  ]
+
+    file_path = tmp_path / 'order_flow_sample.csv'
+    file_path.write_text('\n'.join(order_flow))
+    output = read_order_flow_csv(file_path)
+
+    assert output[0] == (2, New("ORD_0001", Side.BID, 95, 15, 1))
+    assert output[1] == (3, New("ORD_0002", Side.BID, 98, 8, 3))
+    assert output[2] == (4, Rejection(RejectionCode.MISSING_ORDER_ID))
+    assert output[3] == (5, New("ORD_0004", Side.BID, 96, 8, 6))
+    assert output[4] == (6, New("ORD_0005", Side.BID, 96, 8, 6))
+    assert output[5] == (7, New("ORD_0006", Side.BID, 96, 8, 6))
+    assert output[6] == (8, Rejection(RejectionCode.MISSING_TIMESTAMP))
+    assert output[7] == (9, New("ORD_0010", Side.ASK, 103, 5, 7))
+    assert output[8] == (10, Cancel("ORD_0003", 10))
+    assert output[9] == (11, New("Ord_0015", Side.BID, 96, 8, 12))
+
+
 def test_nonexistent_path(tmp_path: Path):
     order_flow = ["event_type,order_id,side,price,quantity,timestamp",
                   "NEW,ORD_0001,BID,95,15,1",
