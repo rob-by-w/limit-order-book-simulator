@@ -40,20 +40,19 @@ class Simulator:
         self.order_sequence_number = 1
 
     def run(self, events: list[tuple[int, New | Cancel | Rejection]]) -> SimulationResult:
+        trade_list = []
         rejection_list = []
 
         for line_number, event in events:
             match event:
                 case New():
-                    self.matching_engine.submit(self._handle_new(event))
+                    self._handle_new(event, trade_list, rejection_list)
+
                 case Cancel():
-                    try:
-                        self.order_book.cancel_order(self._handle_cancel(event))
-                    except UnknownOrderError:
-                        rejection_list.append(self._handle_reject(line_number, BusinessRejectionCode.UNKNOWN_ORDER_ID))
+                    self._handle_cancel(line_number, event, rejection_list)
 
         return SimulationResult(
-            trades=[],
+            trades=trade_list,
             rejections=rejection_list,
             final_book_state={
                 Side.BID: self.order_book.depth(Side.BID, 5),
@@ -61,20 +60,25 @@ class Simulator:
             },
         )
 
-    def _handle_new(self, new_order_event: New) -> Order:
-        self.order = Order(id=new_order_event.id,
-                           side=new_order_event.side,
-                           price=new_order_event.price,
-                           order_quantity=new_order_event.order_quantity,
-                           timestamp=new_order_event.timestamp,
-                           seq_number=self.order_sequence_number
-                           )
+    def _handle_new(self, new_order_event: New, trade_list, rejection_list) -> None:
+        order = Order(id=new_order_event.id,
+                      side=new_order_event.side,
+                      price=new_order_event.price,
+                      order_quantity=new_order_event.order_quantity,
+                      timestamp=new_order_event.timestamp,
+                      seq_number=self.order_sequence_number
+                      )
         self.order_sequence_number += 1
 
-        return self.order
+        submit_output = self.matching_engine.submit(order)
+        if submit_output:
+            trade_list.extend(submit_output)
 
-    def _handle_cancel(self, cancel_event: Cancel) -> str:
-        return cancel_event.id
+    def _handle_cancel(self, line_number, cancel_event: Cancel, rejection_list) -> None:
+        try:
+            self.order_book.cancel_order(cancel_event.id)
+        except UnknownOrderError:
+            rejection_list.append(RejectedEvent(line_number, BusinessRejectionCode.UNKNOWN_ORDER_ID))
 
     def _handle_reject(self, line_num, rejection_reason) -> RejectedEvent:
         return RejectedEvent(line_num, rejection_reason)
