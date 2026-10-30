@@ -30,8 +30,11 @@ class Simulator:
 
     def run(self, events: list[tuple[int, New | Cancel | Rejection]]) -> SimulationResult:
         for line_number, event in events:
-            if isinstance(event, New):
-                self.matching_engine.submit(self._handle_new(event))
+            match event:
+                case New():
+                    self.matching_engine.submit(self._handle_new(event))
+                case Cancel():
+                    self.order_book.cancel_order(self._handle_cancel(event))
 
         return SimulationResult(
             trades=[],
@@ -50,3 +53,6 @@ class Simulator:
         self.order_sequence_number += 1
 
         return self.order
+
+    def _handle_cancel(self, cancel_event: Cancel) -> str:
+        return cancel_event.id
