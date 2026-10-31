@@ -96,7 +96,7 @@ def test_single_trade(simulator, events, trades, rejections, final_book_state):
          (2, New("ORD_0001", Side.BID, 95, 5, 1)),
          (3, New("ORD_0002", Side.BID, 95, 7, 2)),
          (4, New("ORD_0003", Side.BID, 94, 3, 3)),
-         (4, New("ORD_0004", Side.ASK, 94, 8, 4))
+         (5, New("ORD_0004", Side.ASK, 94, 8, 4))
      ], [
          Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 4),
          Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 3, 4)
@@ -105,7 +105,7 @@ def test_single_trade(simulator, events, trades, rejections, final_book_state):
          (2, New("ORD_0001", Side.BID, 95, 5, 1)),
          (3, New("ORD_0002", Side.BID, 95, 7, 2)),
          (4, New("ORD_0003", Side.BID, 94, 3, 3)),
-         (4, New("ORD_0004", Side.ASK, 94, 15, 4))
+         (5, New("ORD_0004", Side.ASK, 94, 15, 4))
      ], [
          Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 4),
          Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 7, 4),
@@ -115,7 +115,7 @@ def test_single_trade(simulator, events, trades, rejections, final_book_state):
          (2, New("ORD_0001", Side.BID, 95, 5, 1)),
          (3, New("ORD_0002", Side.BID, 95, 7, 2)),
          (4, New("ORD_0003", Side.BID, 94, 3, 3)),
-         (4, New("ORD_0004", Side.ASK, 94, 20, 4))
+         (5, New("ORD_0004", Side.ASK, 94, 20, 4))
      ], [
          Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 4),
          Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 7, 4),
@@ -125,7 +125,7 @@ def test_single_trade(simulator, events, trades, rejections, final_book_state):
          (2, New("ORD_0001", Side.BID, 95, 5, 1)),
          (3, New("ORD_0002", Side.BID, 95, 7, 2)),
          (4, New("ORD_0003", Side.BID, 92, 3, 3)),
-         (4, New("ORD_0004", Side.ASK, 94, 20, 4))
+         (5, New("ORD_0004", Side.ASK, 94, 20, 4))
      ], [
          Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 4),
          Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 7, 4)
@@ -134,7 +134,7 @@ def test_single_trade(simulator, events, trades, rejections, final_book_state):
          (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
          (3, New("ORD_0002", Side.ASK, 105, 5, 2)),
          (4, New("ORD_0003", Side.ASK, 106, 6, 3)),
-         (4, New("ORD_0004", Side.BID, 106, 4, 4))
+         (5, New("ORD_0004", Side.BID, 106, 4, 4))
      ], [
          Trade("TRD_0001", "ORD_0004", "ORD_0001", "ORD_0004", 105, 3, 4),
          Trade("TRD_0002", "ORD_0004", "ORD_0002", "ORD_0004", 105, 1, 4)
@@ -143,7 +143,7 @@ def test_single_trade(simulator, events, trades, rejections, final_book_state):
          (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
          (3, New("ORD_0002", Side.ASK, 105, 5, 2)),
          (4, New("ORD_0003", Side.ASK, 108, 6, 3)),
-         (4, New("ORD_0004", Side.BID, 106, 10, 4))
+         (5, New("ORD_0004", Side.BID, 106, 10, 4))
      ], [
          Trade("TRD_0001", "ORD_0004", "ORD_0001", "ORD_0004", 105, 3, 4),
          Trade("TRD_0002", "ORD_0004", "ORD_0002", "ORD_0004", 105, 5, 4)
@@ -152,7 +152,7 @@ def test_single_trade(simulator, events, trades, rejections, final_book_state):
          (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
          (3, New("ORD_0002", Side.ASK, 105, 5, 2)),
          (4, New("ORD_0003", Side.ASK, 106, 6, 3)),
-         (4, New("ORD_0004", Side.BID, 106, 10, 4))
+         (5, New("ORD_0004", Side.BID, 106, 10, 4))
      ], [
          Trade("TRD_0001", "ORD_0004", "ORD_0001", "ORD_0004", 105, 3, 4),
          Trade("TRD_0002", "ORD_0004", "ORD_0002", "ORD_0004", 105, 5, 4),
@@ -162,7 +162,7 @@ def test_single_trade(simulator, events, trades, rejections, final_book_state):
          (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
          (3, New("ORD_0002", Side.ASK, 105, 5, 2)),
          (4, New("ORD_0003", Side.ASK, 106, 6, 3)),
-         (4, New("ORD_0004", Side.BID, 106, 20, 4))
+         (5, New("ORD_0004", Side.BID, 106, 20, 4))
      ], [
          Trade("TRD_0001", "ORD_0004", "ORD_0001", "ORD_0004", 105, 3, 4),
          Trade("TRD_0002", "ORD_0004", "ORD_0002", "ORD_0004", 105, 5, 4),
