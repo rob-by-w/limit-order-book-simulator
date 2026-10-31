@@ -12,12 +12,13 @@ from enum import StrEnum
 
 from orderbook.book import OrderBook, UnknownOrderError
 from orderbook.events import New, Cancel, Rejection, RejectionCode
-from orderbook.matching import MatchingEngine
+from orderbook.matching import MatchingEngine, DuplicateOrderIdError
 from orderbook.order import Trade, Order, Side
 
 
 class BusinessRejectionCode(StrEnum):
-    UNKNOWN_ORDER_ID = "unknown_order_id"
+    UNKNOWN_ORDER_ID = "unknown_order_id",
+    DUPLICATE_ORDER_ID = "duplicate_order_id",
 
 
 @dataclass(frozen=True)
@@ -29,7 +30,7 @@ class RejectedEvent:
 @dataclass
 class SimulationResult:
     trades: list[Trade] = field(default_factory=list)
-    rejections: list[Rejection] = field(default_factory=list)
+    rejections: list[RejectedEvent] = field(default_factory=list)
     final_book_state: dict = field(default_factory=dict)
 
 
@@ -38,6 +39,7 @@ class Simulator:
         self.order_book = OrderBook()
         self.matching_engine = MatchingEngine(self.order_book)
         self.order_sequence_number = 1
+        self.seen_order_ids = set()
 
     def run(self, events: list[tuple[int, New | Cancel | Rejection]]) -> SimulationResult:
         trade_list = []
@@ -46,10 +48,13 @@ class Simulator:
         for line_number, event in events:
             match event:
                 case New():
-                    self._handle_new(event, trade_list, rejection_list)
+                    self._handle_new(line_number, event, trade_list, rejection_list)
 
                 case Cancel():
                     self._handle_cancel(line_number, event, rejection_list)
+
+                case Rejection():
+                    self._handle_reject(line_number, event, rejection_list)
 
         return SimulationResult(
             trades=trade_list,
@@ -60,7 +65,7 @@ class Simulator:
             },
         )
 
-    def _handle_new(self, new_order_event: New, trade_list, rejection_list) -> None:
+    def _handle_new(self, line_number, new_order_event: New, trade_list, rejection_list) -> None:
         order = Order(id=new_order_event.id,
                       side=new_order_event.side,
                       price=new_order_event.price,
@@ -68,11 +73,22 @@ class Simulator:
                       timestamp=new_order_event.timestamp,
                       seq_number=self.order_sequence_number
                       )
-        self.order_sequence_number += 1
 
-        submit_output = self.matching_engine.submit(order)
-        if submit_output:
-            trade_list.extend(submit_output)
+        if order.id in self.seen_order_ids:
+            rejection_list.append(RejectedEvent(line_number, BusinessRejectionCode.DUPLICATE_ORDER_ID))
+            return
+
+        try:
+            submit_output = self.matching_engine.submit(order)
+
+            if submit_output:
+                trade_list.extend(submit_output)
+
+            self.order_sequence_number += 1
+            self.seen_order_ids.add(order.id)
+
+        except DuplicateOrderIdError:
+            rejection_list.append(RejectedEvent(line_number, BusinessRejectionCode.DUPLICATE_ORDER_ID))
 
     def _handle_cancel(self, line_number, cancel_event: Cancel, rejection_list) -> None:
         try:
@@ -80,5 +96,5 @@ class Simulator:
         except UnknownOrderError:
             rejection_list.append(RejectedEvent(line_number, BusinessRejectionCode.UNKNOWN_ORDER_ID))
 
-    def _handle_reject(self, line_num, rejection_reason) -> RejectedEvent:
-        return RejectedEvent(line_num, rejection_reason)
+    def _handle_reject(self, line_number, event, rejection_list) -> None:
+        rejection_list.append(RejectedEvent(line_number, event.reason))

@@ -2,7 +2,7 @@ import pytest
 
 from orderbook.order import Order, Side, Trade
 from orderbook.book import OrderBook
-from orderbook.matching import MatchingEngine
+from orderbook.matching import MatchingEngine, DuplicateOrderIdError
 
 DUPLICATE_ORDER_ID_ERROR_MSG = "Duplicate order ID"
 
@@ -330,7 +330,7 @@ def test_incoming_order_with_duplicate_id(orderbook, incoming_order, request):
     initial_bid_depth = matching_engine.orderbook.depth(Side.BID, 10)
     initial_ask_depth = matching_engine.orderbook.depth(Side.ASK, 10)
 
-    with pytest.raises(ValueError, match=DUPLICATE_ORDER_ID_ERROR_MSG):
+    with pytest.raises(DuplicateOrderIdError, match=DUPLICATE_ORDER_ID_ERROR_MSG):
         matching_engine.submit(request.getfixturevalue(incoming_order))
 
     assert matching_engine.orderbook.best_bid() == initial_best_bid

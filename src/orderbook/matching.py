@@ -14,6 +14,8 @@ Design notes:
 from orderbook.book import OrderBook
 from orderbook.order import Order, Side, Trade
 
+class DuplicateOrderIdError(Exception):
+    pass
 
 def _crosses(order, best_opposite_price):
     """Return True if the order's limit price can trade at best_opposite_price.
@@ -54,7 +56,7 @@ class MatchingEngine:
         executed_trade = []
 
         if order.id in self.orderbook.index:
-            raise ValueError("Duplicate order ID")
+            raise DuplicateOrderIdError("Duplicate order ID")
 
         if order.side == Side.BID:
             orderbook_side = Side.ASK
