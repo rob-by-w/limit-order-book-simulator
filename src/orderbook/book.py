@@ -109,7 +109,10 @@ class OrderBook:
 
         return current_best_ask - current_best_bid
 
-    def depth(self, side, n):
+    def depth(self, side, n=None):
+        if n is None:
+            n = max(1, len(self.bid_levels) if side == Side.BID else len(self.ask_levels))
+
         if n <= 0:
             raise ValueError("Invalid depth level input")
 

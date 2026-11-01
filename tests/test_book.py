@@ -675,6 +675,77 @@ def test_multiple_depth_calls(order_1, order_2, order_3, expected_heap_output, e
     assert orderbook.depth(order_1_local.side, 5) == expected_depth_output
 
 
+@pytest.mark.parametrize("orders, expected_depth_bid, expected_depth_ask", [
+    ([
+         Order(id="ORD_0001", side=Side.BID, price=92, order_quantity=7, timestamp=1, seq_number=1),
+         Order(id="ORD_0002", side=Side.BID, price=99, order_quantity=4, timestamp=2, seq_number=2),
+         Order(id="ORD_0003", side=Side.BID, price=94, order_quantity=5, timestamp=3, seq_number=3),
+     ], [(99, 4), (94, 5), (92, 7)], []),
+    ([
+         Order(id="ORD_0001", side=Side.BID, price=92, order_quantity=7, timestamp=1, seq_number=1),
+         Order(id="ORD_0002", side=Side.BID, price=99, order_quantity=4, timestamp=2, seq_number=2),
+         Order(id="ORD_0003", side=Side.BID, price=94, order_quantity=5, timestamp=3, seq_number=3),
+         Order(id="ORD_0004", side=Side.BID, price=97, order_quantity=10, timestamp=4, seq_number=4),
+         Order(id="ORD_0005", side=Side.BID, price=96, order_quantity=8, timestamp=5, seq_number=5),
+     ], [(99, 4), (97, 10), (96, 8), (94, 5), (92, 7)], []),
+    ([
+         Order(id="ORD_0001", side=Side.BID, price=92, order_quantity=7, timestamp=1, seq_number=1),
+         Order(id="ORD_0002", side=Side.BID, price=99, order_quantity=4, timestamp=2, seq_number=2),
+         Order(id="ORD_0003", side=Side.BID, price=94, order_quantity=5, timestamp=3, seq_number=3),
+         Order(id="ORD_0004", side=Side.BID, price=97, order_quantity=10, timestamp=4, seq_number=4),
+         Order(id="ORD_0005", side=Side.BID, price=96, order_quantity=8, timestamp=5, seq_number=5),
+         Order(id="ORD_0006", side=Side.BID, price=100, order_quantity=1, timestamp=6, seq_number=6),
+         Order(id="ORD_0007", side=Side.BID, price=98, order_quantity=11, timestamp=7, seq_number=7),
+     ], [(100, 1), (99, 4), (98, 11), (97, 10), (96, 8), (94, 5), (92, 7)], []),
+    ([
+         Order(id="ORD_0001", side=Side.ASK, price=102, order_quantity=10, timestamp=1, seq_number=1),
+         Order(id="ORD_0002", side=Side.ASK, price=110, order_quantity=11, timestamp=2, seq_number=2),
+         Order(id="ORD_0003", side=Side.ASK, price=101, order_quantity=7, timestamp=3, seq_number=3),
+     ], [], [(101, 7), (102, 10), (110, 11)]),
+    ([
+         Order(id="ORD_0001", side=Side.ASK, price=102, order_quantity=10, timestamp=1, seq_number=1),
+         Order(id="ORD_0002", side=Side.ASK, price=110, order_quantity=11, timestamp=2, seq_number=2),
+         Order(id="ORD_0003", side=Side.ASK, price=101, order_quantity=7, timestamp=3, seq_number=3),
+         Order(id="ORD_0004", side=Side.ASK, price=105, order_quantity=1, timestamp=4, seq_number=4),
+         Order(id="ORD_0005", side=Side.ASK, price=108, order_quantity=13, timestamp=5, seq_number=5),
+     ], [], [(101, 7), (102, 10), (105, 1), (108, 13), (110, 11)]),
+    ([
+         Order(id="ORD_0001", side=Side.ASK, price=102, order_quantity=10, timestamp=1, seq_number=1),
+         Order(id="ORD_0002", side=Side.ASK, price=110, order_quantity=11, timestamp=2, seq_number=2),
+         Order(id="ORD_0003", side=Side.ASK, price=101, order_quantity=7, timestamp=3, seq_number=3),
+         Order(id="ORD_0004", side=Side.ASK, price=105, order_quantity=1, timestamp=4, seq_number=4),
+         Order(id="ORD_0005", side=Side.ASK, price=108, order_quantity=13, timestamp=5, seq_number=5),
+         Order(id="ORD_0006", side=Side.ASK, price=113, order_quantity=9, timestamp=6, seq_number=6),
+         Order(id="ORD_0007", side=Side.ASK, price=106, order_quantity=6, timestamp=7, seq_number=7),
+     ], [], [(101, 7), (102, 10), (105, 1), (106, 6), (108, 13), (110, 11), (113, 9)]),
+    ([
+         Order(id="ORD_0001", side=Side.BID, price=92, order_quantity=7, timestamp=1, seq_number=1),
+         Order(id="ORD_0002", side=Side.BID, price=99, order_quantity=4, timestamp=2, seq_number=2),
+         Order(id="ORD_0003", side=Side.ASK, price=102, order_quantity=10, timestamp=3, seq_number=3),
+         Order(id="ORD_0004", side=Side.ASK, price=110, order_quantity=11, timestamp=4, seq_number=4),
+         Order(id="ORD_0005", side=Side.BID, price=94, order_quantity=5, timestamp=5, seq_number=5),
+         Order(id="ORD_0006", side=Side.BID, price=97, order_quantity=10, timestamp=6, seq_number=6),
+         Order(id="ORD_0007", side=Side.BID, price=96, order_quantity=8, timestamp=7, seq_number=7),
+         Order(id="ORD_0008", side=Side.ASK, price=101, order_quantity=7, timestamp=8, seq_number=8),
+         Order(id="ORD_0009", side=Side.BID, price=100, order_quantity=1, timestamp=9, seq_number=9),
+         Order(id="ORD_0010", side=Side.ASK, price=105, order_quantity=1, timestamp=10, seq_number=10),
+         Order(id="ORD_0011", side=Side.BID, price=98, order_quantity=11, timestamp=11, seq_number=11),
+         Order(id="ORD_0012", side=Side.ASK, price=108, order_quantity=13, timestamp=12, seq_number=12),
+         Order(id="ORD_0013", side=Side.ASK, price=113, order_quantity=9, timestamp=13, seq_number=13),
+         Order(id="ORD_0014", side=Side.ASK, price=106, order_quantity=6, timestamp=14, seq_number=14),
+     ], [(100, 1), (99, 4), (98, 11), (97, 10), (96, 8), (94, 5), (92, 7)],
+     [(101, 7), (102, 10), (105, 1), (106, 6), (108, 13), (110, 11), (113, 9)]),
+])
+def test_depth_without_specified_level(orders, expected_depth_bid, expected_depth_ask):
+    orderbook = OrderBook()
+
+    for order in orders:
+        orderbook.add_order(order)
+
+    assert orderbook.depth(Side.BID) == expected_depth_bid
+    assert orderbook.depth(Side.ASK) == expected_depth_ask
+
+
 @pytest.mark.parametrize("side, n",
                          [(Side.BID, 0), (Side.BID, -2), (Side.ASK, 0), (Side.ASK, -1)])
 def test_depth_with_invalid_n_on_empty_orderbook(side, n):
