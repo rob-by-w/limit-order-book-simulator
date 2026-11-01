@@ -668,3 +668,132 @@ def test_two_simulators_give_same_result(events, simulation_result):
 def test_run_type_error(simulator, events):
     with pytest.raises(TypeError, match=UNEXPECTED_EVENT_TYPE_ERROR_MSG + str(events)):
         simulator.run(events)
+
+
+@pytest.mark.parametrize("events, simulation_result", [
+    ([
+         (2, New("ORD_0001", Side.BID, 98, 3, 1)),
+         (3, New("ORD_0002", Side.BID, 98, 5, 2)),
+         (4, New("ORD_0003", Side.BID, 98, 7, 3)),
+         (5, New("ORD_0004", Side.BID, 99, 6, 4)),
+         (6, New("ORD_0005", Side.BID, 99, 1, 5)),
+     ], SimulationResult(
+        trades=[],
+        rejections=[],
+        final_book_state={Side.BID: [(99, 7), (98, 15)], Side.ASK: []})
+    ),
+    ([
+         (2, New("ORD_0001", Side.ASK, 98, 3, 1)),
+         (3, New("ORD_0002", Side.ASK, 98, 5, 2)),
+         (4, New("ORD_0003", Side.ASK, 98, 7, 3)),
+         (5, New("ORD_0004", Side.ASK, 99, 6, 4)),
+         (6, New("ORD_0005", Side.ASK, 99, 1, 5)),
+     ], SimulationResult(
+        trades=[],
+        rejections=[],
+        final_book_state={Side.BID: [], Side.ASK: [(98, 15), (99, 7)]})
+    ),
+    ([
+         (2, New("ORD_0001", Side.BID, 98, 3, 1)),
+         (3, New("ORD_0002", Side.BID, 98, 5, 2)),
+         (4, New("ORD_0003", Side.ASK, 103, 10, 3)),
+         (5, New("ORD_0004", Side.BID, 98, 7, 4)),
+         (6, New("ORD_0005", Side.BID, 99, 6, 5)),
+         (7, New("ORD_0006", Side.ASK, 105, 7, 6)),
+         (8, New("ORD_0007", Side.ASK, 105, 5, 7)),
+         (9, New("ORD_0008", Side.BID, 99, 1, 8)),
+         (10, New("ORD_0009", Side.ASK, 103, 4, 9)),
+     ], SimulationResult(
+        trades=[],
+        rejections=[],
+        final_book_state={Side.BID: [(99, 7), (98, 15)], Side.ASK: [(103, 14), (105, 12)]})
+    ),
+    ([
+         (2, New("ORD_0001", Side.BID, 98, 3, 1)),
+         (3, New("ORD_0002", Side.BID, 98, 5, 2)),
+         (4, New("ORD_0003", Side.BID, 98, 7, 3)),
+         (5, New("ORD_0004", Side.BID, 99, 6, 4)),
+         (6, New("ORD_0005", Side.BID, 99, 1, 5)),
+         (7, New("ORD_0006", Side.ASK, 99, 2, 6)),
+     ], SimulationResult(
+        trades=[Trade("TRD_0001", "ORD_0004", "ORD_0006", "ORD_0006", 99, 2, 6)],
+        rejections=[],
+        final_book_state={Side.BID: [(99, 5), (98, 15)], Side.ASK: []})
+    ),
+    ([
+         (2, New("ORD_0001", Side.ASK, 98, 3, 1)),
+         (3, New("ORD_0002", Side.ASK, 98, 5, 2)),
+         (4, New("ORD_0003", Side.ASK, 98, 7, 3)),
+         (5, New("ORD_0004", Side.ASK, 99, 6, 4)),
+         (6, New("ORD_0005", Side.ASK, 99, 1, 5)),
+         (7, New("ORD_0006", Side.BID, 98, 2, 6)),
+     ], SimulationResult(
+        trades=[Trade("TRD_0001", "ORD_0006", "ORD_0001", "ORD_0006", 98, 2, 6)],
+        rejections=[],
+        final_book_state={Side.BID: [], Side.ASK: [(98, 13), (99, 7)]})
+    ),
+    ([
+         (2, New("ORD_0001", Side.BID, 98, 3, 1)),
+         (3, New("ORD_0002", Side.BID, 98, 5, 2)),
+         (4, New("ORD_0003", Side.ASK, 103, 10, 3)),
+         (5, New("ORD_0004", Side.BID, 98, 7, 4)),
+         (6, New("ORD_0005", Side.BID, 99, 6, 5)),
+         (7, New("ORD_0006", Side.ASK, 105, 7, 6)),
+         (8, New("ORD_0007", Side.ASK, 105, 5, 7)),
+         (9, New("ORD_0008", Side.BID, 99, 1, 8)),
+         (10, New("ORD_0009", Side.ASK, 103, 4, 9)),
+         (11, New("ORD_0010", Side.ASK, 99, 5, 10)),
+         (12, New("ORD_0011", Side.BID, 103, 4, 11)),
+     ], SimulationResult(
+        trades=[
+            Trade("TRD_0001", "ORD_0005", "ORD_0010", "ORD_0010", 99, 5, 10),
+            Trade("TRD_0002", "ORD_0011", "ORD_0003", "ORD_0011", 103, 4, 11)
+        ],
+        rejections=[],
+        final_book_state={Side.BID: [(99, 2), (98, 15)], Side.ASK: [(103, 10), (105, 12)]})
+    ),
+])
+def test_simulator_result_depth_aggregation(simulator, events, simulation_result):
+    simulator_result = simulator.run(events)
+    assert simulator_result == simulation_result
+
+
+@pytest.mark.parametrize("events, simulation_result", [
+    ([
+         (2, New("ORD_0001", Side.BID, 98, 3, 1)),
+         (3, New("ORD_0002", Side.BID, 100, 5, 2)),
+         (4, New("ORD_0003", Side.BID, 95, 7, 3)),
+         (5, New("ORD_0004", Side.BID, 99, 6, 4)),
+     ], SimulationResult(
+        trades=[],
+        rejections=[],
+        final_book_state={Side.BID: [(100, 5), (99, 6), (98, 3), (95, 7)], Side.ASK: []})
+    ),
+    ([
+         (2, New("ORD_0001", Side.ASK, 98, 3, 1)),
+         (3, New("ORD_0002", Side.ASK, 100, 5, 2)),
+         (4, New("ORD_0003", Side.ASK, 96, 7, 3)),
+         (5, New("ORD_0004", Side.ASK, 99, 6, 4)),
+     ], SimulationResult(
+        trades=[],
+        rejections=[],
+        final_book_state={Side.BID: [], Side.ASK: [(96, 7), (98, 3), (99, 6), (100, 5)]})
+    ),
+    ([
+         (2, New("ORD_0001", Side.BID, 98, 3, 1)),
+         (3, New("ORD_0002", Side.ASK, 108, 18, 2)),
+         (4, New("ORD_0003", Side.BID, 100, 5, 3)),
+         (5, New("ORD_0005", Side.BID, 99, 6, 5)),
+         (6, New("ORD_0006", Side.ASK, 105, 4, 6)),
+         (7, New("ORD_0009", Side.ASK, 107, 11, 9)),
+         (8, New("ORD_0010", Side.ASK, 109, 3, 10)),
+     ], SimulationResult(
+        trades=[],
+        rejections=[],
+        final_book_state={Side.BID: [(100, 5), (99, 6), (98, 3)],
+                          Side.ASK: [(105, 4), (107, 11), (108, 18), (109, 3)]})
+    ),
+])
+def test_simulator_result_depth_order(simulator, events, simulation_result):
+    simulator_result = simulator.run(events)
+    assert simulator_result == simulation_result
