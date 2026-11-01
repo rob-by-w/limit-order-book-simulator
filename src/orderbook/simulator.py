@@ -62,10 +62,7 @@ class Simulator:
         return SimulationResult(
             trades=trade_list,
             rejections=rejection_list,
-            final_book_state={
-                Side.BID: self.order_book.depth(Side.BID, 5),
-                Side.ASK: self.order_book.depth(Side.ASK, 5)
-            },
+            final_book_state={side: self.order_book.depth(side) for side in [Side.BID, Side.ASK]},
         )
 
     def _handle_new(self, line_number, new_order_event: New, trade_list, rejection_list) -> None:
