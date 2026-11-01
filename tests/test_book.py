@@ -746,8 +746,24 @@ def test_depth_without_specified_level(orders, expected_depth_bid, expected_dept
     assert orderbook.depth(Side.ASK) == expected_depth_ask
 
 
-@pytest.mark.parametrize("side, n",
-                         [(Side.BID, 0), (Side.BID, -2), (Side.ASK, 0), (Side.ASK, -1)])
+@pytest.mark.parametrize("side, n", [(Side.BID, 0), (Side.ASK, 0)])
+def test_depth_with_n_equals_zero_on_empty_orderbook(side, n):
+    orderbook = OrderBook()
+
+    assert orderbook.depth(side, n) == []
+
+
+@pytest.mark.parametrize("order_1, n", [("order_bid_1", 0), ("order_ask_1", 0)])
+def test_depth_with_n_equals_zero(order_1, n, request):
+    order_1_local = request.getfixturevalue(order_1)
+
+    orderbook = OrderBook()
+    orderbook.add_order(order_1_local)
+
+    assert orderbook.depth(order_1_local.side, n) == []
+
+
+@pytest.mark.parametrize("side, n", [(Side.BID, -2), (Side.ASK, -1)])
 def test_depth_with_invalid_n_on_empty_orderbook(side, n):
     orderbook = OrderBook()
 
@@ -755,8 +771,7 @@ def test_depth_with_invalid_n_on_empty_orderbook(side, n):
         orderbook.depth(side, n)
 
 
-@pytest.mark.parametrize("order_1, n",
-                         [("order_bid_1", 0), ("order_bid_1", -2), ("order_ask_1", 0), ("order_ask_1", -1)])
+@pytest.mark.parametrize("order_1, n", [("order_bid_1", -2), ("order_ask_1", -1)])
 def test_depth_with_invalid_n(order_1, n, request):
     order_1_local = request.getfixturevalue(order_1)
 

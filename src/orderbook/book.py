@@ -111,9 +111,12 @@ class OrderBook:
 
     def depth(self, side, n=None):
         if n is None:
-            n = max(1, len(self.bid_levels) if side == Side.BID else len(self.ask_levels))
+            n = len(self.bid_levels) if side == Side.BID else len(self.ask_levels)
 
-        if n <= 0:
+        if n == 0:
+            return []
+
+        if n < 0:
             raise ValueError("Invalid depth level input")
 
         depth_levels = []
