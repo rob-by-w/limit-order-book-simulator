@@ -56,6 +56,9 @@ class Simulator:
                 case Rejection():
                     self._handle_reject(line_number, event, rejection_list)
 
+                case _:
+                    raise TypeError(f"Unexpected event type: {event}")
+
         return SimulationResult(
             trades=trade_list,
             rejections=rejection_list,

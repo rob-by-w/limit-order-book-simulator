@@ -4,6 +4,8 @@ from orderbook.events import New, Cancel, RejectionCode, Rejection
 from orderbook.simulator import Simulator, SimulationResult, RejectedEvent, BusinessRejectionCode
 from orderbook.order import Side, Trade
 
+UNEXPECTED_EVENT_TYPE_ERROR_MSG = "Unexpected event type: "
+
 
 @pytest.fixture
 def simulator():
@@ -523,3 +525,146 @@ def test_rejection_duplicate_order_id_multiple_run(simulator, events_run_1, simu
 def test_rejection_parse_time_and_business_rejections(simulator, events, simulation_result):
     simulator_result = simulator.run(events)
     assert simulator_result == simulation_result
+
+
+def test_run_empty_events(simulator):
+    simulator_result = simulator.run([])
+    assert simulator_result == SimulationResult(trades=[], rejections=[], final_book_state={Side.BID: [], Side.ASK: []})
+
+
+@pytest.mark.parametrize(
+    "events_run_1, simulation_result_1, events_run_2, simulation_result_2",
+    [
+        ([], SimulationResult(
+            trades=[],
+            rejections=[],
+            final_book_state={Side.BID: [], Side.ASK: []}),
+         [], SimulationResult(
+                trades=[],
+                rejections=[],
+                final_book_state={Side.BID: [], Side.ASK: []}),
+         ),
+        ([
+             (2, New("ORD_0001", Side.BID, 95, 15, 1)),
+             (3, New("ORD_0002", Side.ASK, 94, 6, 2))
+         ], SimulationResult(
+            trades=[Trade("TRD_0001", "ORD_0001", "ORD_0002", "ORD_0002", 95, 6, 2)],
+            rejections=[],
+            final_book_state={Side.BID: [(95, 9)], Side.ASK: []}),
+         [
+             (2, New("ORD_0003", Side.ASK, 94, 10, 3))
+         ], SimulationResult(
+                trades=[Trade("TRD_0002", "ORD_0001", "ORD_0003", "ORD_0003", 95, 9, 3)],
+                rejections=[],
+                final_book_state={Side.BID: [], Side.ASK: [(94, 1)]}),
+        ),
+        ([
+             (2, New("ORD_0001", Side.ASK, 101, 8, 1)),
+             (3, New("ORD_0002", Side.BID, 101, 10, 2))
+         ], SimulationResult(
+            trades=[Trade("TRD_0001", "ORD_0002", "ORD_0001", "ORD_0002", 101, 8, 2)],
+            rejections=[],
+            final_book_state={Side.BID: [(101, 2)], Side.ASK: []}),
+         [
+             (2, New("ORD_0003", Side.ASK, 103, 7, 3))
+         ], SimulationResult(
+                trades=[],
+                rejections=[],
+                final_book_state={Side.BID: [(101, 2)], Side.ASK: [(103, 7)]}),
+        ),
+        ([
+             (2, New("ORD_0001", Side.BID, 95, 15, 1)),
+             (3, New("ORD_0002", Side.ASK, 94, 6, 2))
+         ], SimulationResult(
+            trades=[Trade("TRD_0001", "ORD_0001", "ORD_0002", "ORD_0002", 95, 6, 2)],
+            rejections=[],
+            final_book_state={Side.BID: [(95, 9)], Side.ASK: []}),
+         [], SimulationResult(
+                trades=[],
+                rejections=[],
+                final_book_state={Side.BID: [(95, 9)], Side.ASK: []}),
+        ),
+        ([
+             (2, New("ORD_0001", Side.BID, 95, 15, 1))
+         ], SimulationResult(
+            trades=[],
+            rejections=[],
+            final_book_state={Side.BID: [(95, 15)], Side.ASK: []}),
+         [
+             (2, New("ORD_0001", Side.BID, 96, 7, 3))
+         ], SimulationResult(
+                trades=[],
+                rejections=[RejectedEvent(2, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
+                final_book_state={Side.BID: [(95, 15)], Side.ASK: []}),
+        ),
+        ([
+             (2, New("ORD_0001", Side.ASK, 106, 12, 1))
+         ], SimulationResult(
+            trades=[],
+            rejections=[],
+            final_book_state={Side.BID: [], Side.ASK: [(106, 12)]}),
+         [
+             (2, New("ORD_0001", Side.BID, 108, 7, 2)),
+             (3, New("ORD_0002", Side.BID, 108, 7, 2))
+         ], SimulationResult(
+                trades=[Trade("TRD_0001", "ORD_0002", "ORD_0001", "ORD_0002", 106, 7, 2)],
+                rejections=[RejectedEvent(2, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
+                final_book_state={Side.BID: [], Side.ASK: [(106, 5)]}),
+        ),
+    ])
+def test_multiple_runs(simulator, events_run_1, simulation_result_1, events_run_2, simulation_result_2):
+    simulator_result_1 = simulator.run(events_run_1)
+    assert simulator_result_1 == simulation_result_1
+
+    simulator_result_2 = simulator.run(events_run_2)
+    assert simulator_result_1 == simulation_result_1
+    assert simulator_result_2 == simulation_result_2
+
+
+@pytest.mark.parametrize("events, simulation_result", [
+    ([
+         (2, Rejection(RejectionCode.MISSING_ORDER_ID)),
+         (3, New("ORD_0001", Side.ASK, 100, 12, 1)),
+         (4, New("ORD_0002", Side.BID, 100, 12, 1))
+     ], SimulationResult(
+        trades=[Trade("TRD_0001", "ORD_0002", "ORD_0001", "ORD_0002", 100, 12, 1)],
+        rejections=[RejectedEvent(2, RejectionCode.MISSING_ORDER_ID)],
+        final_book_state={Side.BID: [], Side.ASK: []})
+    ), ([
+            (2, New("ORD_0001", Side.BID, 95, 5, 1)),
+            (3, New("ORD_0002", Side.BID, 95, 7, 2)),
+            (4, New("ORD_0003", Side.BID, 94, 3, 3)),
+            (5, New("ORD_0004", Side.ASK, 94, 8, 4))
+        ], SimulationResult(
+        trades=[
+            Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 4),
+            Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 3, 4)
+        ],
+        rejections=[],
+        final_book_state={Side.BID: [(95, 4), (94, 3)], Side.ASK: []})
+    ),
+])
+def test_two_simulators_give_same_result(events, simulation_result):
+    simulator_1 = Simulator()
+    simulator_2 = Simulator()
+
+    simulator_result_1 = simulator_1.run(events)
+    assert simulator_result_1 == simulation_result
+
+    simulator_result_2 = simulator_2.run(events)
+    assert simulator_result_2 == simulation_result
+
+
+@pytest.mark.parametrize("events", [
+    [
+        (2, "Unknown Type")
+    ], [
+        (2, New("ORD_0001", Side.BID, 95, 5, 1)),
+        (3, "Garbage"),
+        (4, New("ORD_0003", Side.BID, 94, 3, 3)),
+        (5, New("ORD_0004", Side.ASK, 94, 8, 4))
+    ]
+])
+def test_run_type_error(simulator, events):
+    with pytest.raises(TypeError, match=UNEXPECTED_EVENT_TYPE_ERROR_MSG + str(events)):
+        simulator.run(events)
