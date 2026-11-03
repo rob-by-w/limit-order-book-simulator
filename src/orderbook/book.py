@@ -13,7 +13,7 @@ Design notes:
 """
 import heapq
 
-from orderbook.order import Side
+from orderbook.order import Side, Level
 
 
 class UnknownOrderError(Exception):
@@ -110,6 +110,9 @@ class OrderBook:
         return current_best_ask - current_best_bid
 
     def depth(self, side, n=None):
+        if side not in (Side.BID, Side.ASK):
+            raise ValueError("Unregistered side, side is not BID or ASK")
+
         if n is None:
             n = len(self.bid_levels) if side == Side.BID else len(self.ask_levels)
 
@@ -121,20 +124,12 @@ class OrderBook:
 
         depth_levels = []
 
-        if side == Side.BID:
-            side_levels = self.bid_levels
-            depth_heap = heapq.nlargest(n, side_levels)
-        elif side == Side.ASK:
-            side_levels = self.ask_levels
-            depth_heap = heapq.nsmallest(n, side_levels)
-        else:
-            raise ValueError("Unregistered side, side is not BID or ASK")
+        side_levels = self.bid_levels if side == Side.BID else self.ask_levels
+        depth_prices = heapq.nlargest(n, side_levels) if side == Side.BID else heapq.nsmallest(n, side_levels)
 
-        for price in depth_heap:
+        for price in depth_prices:
             depth_levels.append(
-                (price,
-                 sum(current_order.remaining_quantity for current_order in side_levels[price].values()))
-            )
+                Level(price, sum(current_order.remaining_quantity for current_order in side_levels[price].values())))
 
         return depth_levels
 

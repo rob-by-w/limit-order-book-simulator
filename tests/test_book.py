@@ -1,6 +1,6 @@
 import pytest
 
-from orderbook.order import Order, Side
+from orderbook.order import Order, Side, Level
 from orderbook.book import OrderBook, UnknownOrderError
 
 DUPLICATE_ORDER_ID_ERROR_MSG = "Duplicate order ID"
@@ -537,7 +537,8 @@ def test_depth_of_empty_orderbook(side, expected_output):
 
 
 @pytest.mark.parametrize("order_1, order_2, expected_output",
-                         [("order_bid_1", "order_bid_2", [(100, 25)]), ("order_ask_1", "order_ask_2", [(105, 8)])])
+                         [("order_bid_1", "order_bid_2", [Level(100, 25)]),
+                          ("order_ask_1", "order_ask_2", [Level(105, 8)])])
 def test_depth_of_multiple_orders_at_one_price(order_1, order_2, expected_output, request):
     order_1_local = request.getfixturevalue(order_1)
 
@@ -550,7 +551,8 @@ def test_depth_of_multiple_orders_at_one_price(order_1, order_2, expected_output
 
 
 @pytest.mark.parametrize("order_1, order_2, expected_output",
-                         [("order_bid_1", "order_bid_2", [(100, 22)]), ("order_ask_1", "order_ask_2", [(105, 5)])])
+                         [("order_bid_1", "order_bid_2", [Level(100, 22)]),
+                          ("order_ask_1", "order_ask_2", [Level(105, 5)])])
 def test_depth_of_partial_filled_orders(order_1, order_2, expected_output, request):
     order_1_local = request.getfixturevalue(order_1)
     order_2_local = request.getfixturevalue(order_2)
@@ -566,8 +568,8 @@ def test_depth_of_partial_filled_orders(order_1, order_2, expected_output, reque
 
 
 @pytest.mark.parametrize("order_1, order_2, order_3, expected_output",
-                         [("order_bid_1", "order_bid_2", "order_bid_3", [(101, 8), (100, 25)]),
-                          ("order_ask_1", "order_ask_2", "order_ask_3", [(105, 8), (107, 10)])])
+                         [("order_bid_1", "order_bid_2", "order_bid_3", [Level(101, 8), Level(100, 25)]),
+                          ("order_ask_1", "order_ask_2", "order_ask_3", [Level(105, 8), Level(107, 10)])])
 def test_depth_with_n_larger_than_available_levels(order_1, order_2, order_3, expected_output, request):
     order_1_local = request.getfixturevalue(order_1)
 
@@ -580,8 +582,8 @@ def test_depth_with_n_larger_than_available_levels(order_1, order_2, order_3, ex
 
 
 @pytest.mark.parametrize("order_1, order_2, order_3, expected_output",
-                         [("order_bid_1", "order_bid_2", "order_bid_3", [(101, 8)]),
-                          ("order_ask_1", "order_ask_2", "order_ask_3", [(105, 8)])])
+                         [("order_bid_1", "order_bid_2", "order_bid_3", [Level(101, 8)]),
+                          ("order_ask_1", "order_ask_2", "order_ask_3", [Level(105, 8)])])
 def test_depth_with_n_smaller_than_available_levels(order_1, order_2, order_3, expected_output, request):
     order_1_local = request.getfixturevalue(order_1)
 
@@ -594,8 +596,8 @@ def test_depth_with_n_smaller_than_available_levels(order_1, order_2, order_3, e
 
 
 @pytest.mark.parametrize("order_top_level, order_next_level, output_before_cancel, output_after_cancel",
-                         [("order_bid_3", "order_bid_1", [(101, 8), (100, 10)], [(100, 10)]),
-                          ("order_ask_1", "order_ask_3", [(105, 5), (107, 10)], [(107, 10)])])
+                         [("order_bid_3", "order_bid_1", [Level(101, 8), Level(100, 10)], [Level(100, 10)]),
+                          ("order_ask_1", "order_ask_3", [Level(105, 5), Level(107, 10)], [Level(107, 10)])])
 def test_depth_after_top_level_cancelled(order_top_level, order_next_level, output_before_cancel,
                                          output_after_cancel, request):
     order_top_level_local = request.getfixturevalue(order_top_level)
@@ -613,8 +615,8 @@ def test_depth_after_top_level_cancelled(order_top_level, order_next_level, outp
 
 
 @pytest.mark.parametrize("order_top_level, order_next_level, expected_output",
-                         [("order_bid_3", "order_bid_1", [(100, 10)]),
-                          ("order_ask_1", "order_ask_3", [(107, 10)])])
+                         [("order_bid_3", "order_bid_1", [Level(100, 10)]),
+                          ("order_ask_1", "order_ask_3", [Level(107, 10)])])
 def test_depth_with_stale_heap(order_top_level, order_next_level, expected_output, request):
     order_top_level_local = request.getfixturevalue(order_top_level)
     order_next_level_local = request.getfixturevalue(order_next_level)
@@ -631,8 +633,8 @@ def test_depth_with_stale_heap(order_top_level, order_next_level, expected_outpu
 
 
 @pytest.mark.parametrize("order_bid, order_ask, side, expected_output",
-                         [("order_bid_1", "order_ask_1", Side.BID, [(100, 10)]),
-                          ("order_bid_1", "order_ask_1", Side.ASK, [(105, 5)])])
+                         [("order_bid_1", "order_ask_1", Side.BID, [Level(100, 10)]),
+                          ("order_bid_1", "order_ask_1", Side.ASK, [Level(105, 5)])])
 def test_depth_on_orderbook_with_both_sides(order_bid, order_ask, side, expected_output, request):
     order_bid_local = request.getfixturevalue(order_bid)
     order_ask_local = request.getfixturevalue(order_ask)
@@ -645,8 +647,8 @@ def test_depth_on_orderbook_with_both_sides(order_bid, order_ask, side, expected
 
 
 @pytest.mark.parametrize("order_1, order_2, order_3, expected_heap_output, expected_depth_output",
-                         [("order_bid_1", "order_bid_2", "order_bid_3", [-101, -100], [(101, 8), (100, 25)]),
-                          ("order_ask_1", "order_ask_2", "order_ask_3", [105, 107], [(105, 8), (107, 10)])])
+                         [("order_bid_1", "order_bid_2", "order_bid_3", [-101, -100], [Level(101, 8), Level(100, 25)]),
+                          ("order_ask_1", "order_ask_2", "order_ask_3", [105, 107], [Level(105, 8), Level(107, 10)])])
 def test_multiple_depth_calls(order_1, order_2, order_3, expected_heap_output, expected_depth_output, request):
     order_1_local = request.getfixturevalue(order_1)
     order_2_local = request.getfixturevalue(order_2)
@@ -680,14 +682,14 @@ def test_multiple_depth_calls(order_1, order_2, order_3, expected_heap_output, e
          Order(id="ORD_0001", side=Side.BID, price=92, order_quantity=7, timestamp=1, seq_number=1),
          Order(id="ORD_0002", side=Side.BID, price=99, order_quantity=4, timestamp=2, seq_number=2),
          Order(id="ORD_0003", side=Side.BID, price=94, order_quantity=5, timestamp=3, seq_number=3),
-     ], [(99, 4), (94, 5), (92, 7)], []),
+     ], [Level(99, 4), Level(94, 5), Level(92, 7)], []),
     ([
          Order(id="ORD_0001", side=Side.BID, price=92, order_quantity=7, timestamp=1, seq_number=1),
          Order(id="ORD_0002", side=Side.BID, price=99, order_quantity=4, timestamp=2, seq_number=2),
          Order(id="ORD_0003", side=Side.BID, price=94, order_quantity=5, timestamp=3, seq_number=3),
          Order(id="ORD_0004", side=Side.BID, price=97, order_quantity=10, timestamp=4, seq_number=4),
          Order(id="ORD_0005", side=Side.BID, price=96, order_quantity=8, timestamp=5, seq_number=5),
-     ], [(99, 4), (97, 10), (96, 8), (94, 5), (92, 7)], []),
+     ], [Level(99, 4), Level(97, 10), Level(96, 8), Level(94, 5), Level(92, 7)], []),
     ([
          Order(id="ORD_0001", side=Side.BID, price=92, order_quantity=7, timestamp=1, seq_number=1),
          Order(id="ORD_0002", side=Side.BID, price=99, order_quantity=4, timestamp=2, seq_number=2),
@@ -696,19 +698,19 @@ def test_multiple_depth_calls(order_1, order_2, order_3, expected_heap_output, e
          Order(id="ORD_0005", side=Side.BID, price=96, order_quantity=8, timestamp=5, seq_number=5),
          Order(id="ORD_0006", side=Side.BID, price=100, order_quantity=1, timestamp=6, seq_number=6),
          Order(id="ORD_0007", side=Side.BID, price=98, order_quantity=11, timestamp=7, seq_number=7),
-     ], [(100, 1), (99, 4), (98, 11), (97, 10), (96, 8), (94, 5), (92, 7)], []),
+     ], [Level(100, 1), Level(99, 4), Level(98, 11), Level(97, 10), Level(96, 8), Level(94, 5), Level(92, 7)], []),
     ([
          Order(id="ORD_0001", side=Side.ASK, price=102, order_quantity=10, timestamp=1, seq_number=1),
          Order(id="ORD_0002", side=Side.ASK, price=110, order_quantity=11, timestamp=2, seq_number=2),
          Order(id="ORD_0003", side=Side.ASK, price=101, order_quantity=7, timestamp=3, seq_number=3),
-     ], [], [(101, 7), (102, 10), (110, 11)]),
+     ], [], [Level(101, 7), Level(102, 10), Level(110, 11)]),
     ([
          Order(id="ORD_0001", side=Side.ASK, price=102, order_quantity=10, timestamp=1, seq_number=1),
          Order(id="ORD_0002", side=Side.ASK, price=110, order_quantity=11, timestamp=2, seq_number=2),
          Order(id="ORD_0003", side=Side.ASK, price=101, order_quantity=7, timestamp=3, seq_number=3),
          Order(id="ORD_0004", side=Side.ASK, price=105, order_quantity=1, timestamp=4, seq_number=4),
          Order(id="ORD_0005", side=Side.ASK, price=108, order_quantity=13, timestamp=5, seq_number=5),
-     ], [], [(101, 7), (102, 10), (105, 1), (108, 13), (110, 11)]),
+     ], [], [Level(101, 7), Level(102, 10), Level(105, 1), Level(108, 13), Level(110, 11)]),
     ([
          Order(id="ORD_0001", side=Side.ASK, price=102, order_quantity=10, timestamp=1, seq_number=1),
          Order(id="ORD_0002", side=Side.ASK, price=110, order_quantity=11, timestamp=2, seq_number=2),
@@ -717,7 +719,8 @@ def test_multiple_depth_calls(order_1, order_2, order_3, expected_heap_output, e
          Order(id="ORD_0005", side=Side.ASK, price=108, order_quantity=13, timestamp=5, seq_number=5),
          Order(id="ORD_0006", side=Side.ASK, price=113, order_quantity=9, timestamp=6, seq_number=6),
          Order(id="ORD_0007", side=Side.ASK, price=106, order_quantity=6, timestamp=7, seq_number=7),
-     ], [], [(101, 7), (102, 10), (105, 1), (106, 6), (108, 13), (110, 11), (113, 9)]),
+     ], [],
+     [Level(101, 7), Level(102, 10), Level(105, 1), Level(106, 6), Level(108, 13), Level(110, 11), Level(113, 9)]),
     ([
          Order(id="ORD_0001", side=Side.BID, price=92, order_quantity=7, timestamp=1, seq_number=1),
          Order(id="ORD_0002", side=Side.BID, price=99, order_quantity=4, timestamp=2, seq_number=2),
@@ -733,8 +736,8 @@ def test_multiple_depth_calls(order_1, order_2, order_3, expected_heap_output, e
          Order(id="ORD_0012", side=Side.ASK, price=108, order_quantity=13, timestamp=12, seq_number=12),
          Order(id="ORD_0013", side=Side.ASK, price=113, order_quantity=9, timestamp=13, seq_number=13),
          Order(id="ORD_0014", side=Side.ASK, price=106, order_quantity=6, timestamp=14, seq_number=14),
-     ], [(100, 1), (99, 4), (98, 11), (97, 10), (96, 8), (94, 5), (92, 7)],
-     [(101, 7), (102, 10), (105, 1), (106, 6), (108, 13), (110, 11), (113, 9)]),
+     ], [Level(100, 1), Level(99, 4), Level(98, 11), Level(97, 10), Level(96, 8), Level(94, 5), Level(92, 7)],
+     [Level(101, 7), Level(102, 10), Level(105, 1), Level(106, 6), Level(108, 13), Level(110, 11), Level(113, 9)]),
 ])
 def test_depth_without_specified_level(orders, expected_depth_bid, expected_depth_ask):
     orderbook = OrderBook()

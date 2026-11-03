@@ -24,6 +24,16 @@ class Side(Enum):
     ASK = 2
 
 
+@dataclass(frozen=True)
+class Level:
+    """Total quantity resting at one price on one side (L2 data, immutable).
+
+    Carries no order ids or queue order.
+    """
+    price: int
+    quantity: int
+
+
 @dataclass
 class Order:
     """A limit order to buy or sell a quantity at a given price or better.
