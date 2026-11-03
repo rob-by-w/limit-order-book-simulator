@@ -117,7 +117,7 @@ class OrderBook:
             n = len(self.bid_levels) if side == Side.BID else len(self.ask_levels)
 
         if n == 0:
-            return []
+            return ()
 
         if n < 0:
             raise ValueError("Invalid depth level input")
@@ -131,7 +131,7 @@ class OrderBook:
             depth_levels.append(
                 Level(price, sum(current_order.remaining_quantity for current_order in side_levels[price].values())))
 
-        return depth_levels
+        return tuple(depth_levels)
 
     def get_top_order(self, side):
         if side == Side.BID:
