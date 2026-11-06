@@ -12,7 +12,7 @@ from enum import StrEnum
 
 from orderbook.book import OrderBook, UnknownOrderError
 from orderbook.events import New, Cancel, Rejection, RejectionCode
-from orderbook.matching import MatchingEngine, DuplicateOrderIdError
+from orderbook.matching import MatchingEngine
 from orderbook.order import Trade, Order, Side, Level
 
 
@@ -72,6 +72,10 @@ class Simulator:
         )
 
     def _handle_new(self, line_number, new_order_event: New, trade_list, rejection_list) -> None:
+        if new_order_event.id in self.seen_order_ids:
+            rejection_list.append(RejectedEvent(line_number, BusinessRejectionCode.DUPLICATE_ORDER_ID))
+            return
+
         order = Order(id=new_order_event.id,
                       side=new_order_event.side,
                       price=new_order_event.price,
@@ -80,21 +84,11 @@ class Simulator:
                       seq_number=self.order_sequence_number
                       )
 
-        if order.id in self.seen_order_ids:
-            rejection_list.append(RejectedEvent(line_number, BusinessRejectionCode.DUPLICATE_ORDER_ID))
-            return
+        self.order_sequence_number += 1
+        self.seen_order_ids.add(order.id)
 
-        try:
-            submit_output = self.matching_engine.submit(order)
-
-            if submit_output:
-                trade_list.extend(submit_output)
-
-            self.order_sequence_number += 1
-            self.seen_order_ids.add(order.id)
-
-        except DuplicateOrderIdError:
-            rejection_list.append(RejectedEvent(line_number, BusinessRejectionCode.DUPLICATE_ORDER_ID))
+        submit_output = self.matching_engine.submit(order)
+        trade_list.extend(submit_output)
 
     def _handle_cancel(self, line_number, cancel_event: Cancel, rejection_list) -> None:
         try:
