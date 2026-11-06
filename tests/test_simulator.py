@@ -1060,3 +1060,207 @@ def test_simulator_result_depth_level(simulator, events, simulation_result):
     simulator_result = simulator.run(events)
 
     assert simulator_result == simulation_result
+
+
+@pytest.mark.parametrize("events, simulation_result", [
+    ([
+         (2, New("ORD_0001", Side.BID, 95, 3, 1)),
+         (3, New("ORD_0002", Side.BID, 92, 5, 12)),
+         (4, New("ORD_0003", Side.BID, 97, 7, 3)),
+     ], SimulationResult(
+        trades=[],
+        rejections=[],
+        final_book_state=BookSnapshot(
+            (Level(97, 7), Level(95, 3), Level(92, 5)),
+            ()
+        ))
+    ),
+    ([
+         (2, New("ORD_0001", Side.ASK, 105, 13, 1)),
+         (3, New("ORD_0002", Side.ASK, 111, 15, 12)),
+         (4, New("ORD_0003", Side.ASK, 104, 7, 3)),
+     ], SimulationResult(
+        trades=[],
+        rejections=[],
+        final_book_state=BookSnapshot(
+            (),
+            (Level(104, 7), Level(105, 13), Level(111, 15))
+        ))
+    ),
+])
+def test_backward_timestamp_is_acceptable(simulator, events, simulation_result):
+    simulator_result = simulator.run(events)
+
+    assert simulator_result == simulation_result
+
+
+@pytest.mark.parametrize("events, expected_simulation_result", [
+    ([
+         (2, New("ORD_0001", Side.BID, 95, 5, 2)),
+         (3, New("ORD_0002", Side.BID, 95, 7, 1)),
+         (4, New("ORD_0003", Side.BID, 94, 3, 3)),
+         (5, New("ORD_0004", Side.ASK, 94, 8, 4))
+     ], SimulationResult(
+        [
+            Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 4),
+            Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 3, 4)
+        ], [], BookSnapshot((Level(95, 4), Level(94, 3)), ())
+    )),
+    ([
+         (2, New("ORD_0001", Side.BID, 95, 5, 1)),
+         (3, New("ORD_0002", Side.BID, 95, 7, 2)),
+         (4, New("ORD_0003", Side.BID, 94, 3, 3)),
+         (5, New("ORD_0004", Side.ASK, 94, 8, 5)),
+         (6, New("ORD_0005", Side.ASK, 93, 2, 4))
+     ], SimulationResult(
+        [
+            Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 5),
+            Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 3, 5),
+            Trade("TRD_0003", "ORD_0002", "ORD_0005", "ORD_0005", 95, 2, 4),
+        ], [], BookSnapshot((Level(95, 2), Level(94, 3)), ())
+    )),
+    ([
+         (2, New("ORD_0001", Side.BID, 95, 5, 1)),
+         (3, New("ORD_0002", Side.BID, 95, 7, 1)),
+         (4, New("ORD_0003", Side.BID, 94, 3, 3)),
+         (5, New("ORD_0004", Side.ASK, 94, 8, 4)),
+         (6, New("ORD_0005", Side.ASK, 93, 2, 5))
+     ], SimulationResult(
+        [
+            Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 4),
+            Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 3, 4),
+            Trade("TRD_0003", "ORD_0002", "ORD_0005", "ORD_0005", 95, 2, 5),
+        ], [], BookSnapshot((Level(95, 2), Level(94, 3)), ())
+    )),
+    ([
+         (2, New("ORD_0001", Side.BID, 95, 5, 1)),
+         (3, New("ORD_0002", Side.BID, 95, 7, 2)),
+         (4, New("ORD_0003", Side.BID, 94, 3, 3)),
+         (5, New("ORD_0004", Side.ASK, 94, 8, 5)),
+         (6, New("ORD_0005", Side.ASK, 93, 2, 5))
+     ], SimulationResult(
+        [
+            Trade("TRD_0001", "ORD_0001", "ORD_0004", "ORD_0004", 95, 5, 5),
+            Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 3, 5),
+            Trade("TRD_0003", "ORD_0002", "ORD_0005", "ORD_0005", 95, 2, 5),
+        ], [], BookSnapshot((Level(95, 2), Level(94, 3)), ())
+    )),
+    ([
+         (2, New("ORD_0001", Side.ASK, 105, 3, 2)),
+         (3, New("ORD_0002", Side.ASK, 105, 5, 3)),
+         (4, New("ORD_0003", Side.ASK, 106, 6, 1)),
+         (5, New("ORD_0004", Side.BID, 106, 4, 4))
+     ], SimulationResult(
+        [
+            Trade("TRD_0001", "ORD_0004", "ORD_0001", "ORD_0004", 105, 3, 4),
+            Trade("TRD_0002", "ORD_0004", "ORD_0002", "ORD_0004", 105, 1, 4)
+        ], [], BookSnapshot((), (Level(105, 4), Level(106, 6)))
+    )),
+    ([
+         (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
+         (3, New("ORD_0002", Side.ASK, 105, 5, 2)),
+         (4, New("ORD_0003", Side.ASK, 108, 6, 3)),
+         (5, New("ORD_0004", Side.BID, 108, 6, 6)),
+         (5, New("ORD_0005", Side.BID, 109, 4, 4))
+     ], SimulationResult(
+        [
+            Trade("TRD_0001", "ORD_0004", "ORD_0001", "ORD_0004", 105, 3, 6),
+            Trade("TRD_0002", "ORD_0004", "ORD_0002", "ORD_0004", 105, 3, 6),
+            Trade("TRD_0003", "ORD_0005", "ORD_0002", "ORD_0005", 105, 2, 4),
+            Trade("TRD_0004", "ORD_0005", "ORD_0003", "ORD_0005", 108, 2, 4),
+        ], [], BookSnapshot((), (Level(108, 4),))
+    )),
+    ([
+         (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
+         (3, New("ORD_0002", Side.ASK, 105, 5, 1)),
+         (4, New("ORD_0003", Side.ASK, 106, 6, 3)),
+         (5, New("ORD_0004", Side.BID, 106, 4, 4))
+     ], SimulationResult(
+        [
+            Trade("TRD_0001", "ORD_0004", "ORD_0001", "ORD_0004", 105, 3, 4),
+            Trade("TRD_0002", "ORD_0004", "ORD_0002", "ORD_0004", 105, 1, 4)
+        ], [], BookSnapshot((), (Level(105, 4), Level(106, 6)))
+    )),
+    ([
+         (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
+         (3, New("ORD_0002", Side.ASK, 105, 5, 2)),
+         (4, New("ORD_0003", Side.ASK, 108, 6, 3)),
+         (5, New("ORD_0004", Side.BID, 108, 6, 5)),
+         (6, New("ORD_0005", Side.BID, 109, 4, 5))
+     ], SimulationResult(
+        [
+            Trade("TRD_0001", "ORD_0004", "ORD_0001", "ORD_0004", 105, 3, 5),
+            Trade("TRD_0002", "ORD_0004", "ORD_0002", "ORD_0004", 105, 3, 5),
+            Trade("TRD_0003", "ORD_0005", "ORD_0002", "ORD_0005", 105, 2, 5),
+            Trade("TRD_0004", "ORD_0005", "ORD_0003", "ORD_0005", 108, 2, 5),
+        ], [], BookSnapshot((), (Level(108, 4),))
+    )),
+])
+def test_trade_priority_follows_arrival_not_timestamp(simulator, events, expected_simulation_result):
+    simulator_result = simulator.run(events)
+
+    assert simulator_result == expected_simulation_result
+
+
+@pytest.mark.parametrize("events, expected_simulation_result", [
+    ([
+         (2, New("ORD_0001", Side.BID, 95, 5, 1)),
+         (3, Cancel("ORD_0003", 4)),
+         (4, New("ORD_0002", Side.BID, 95, 7, 5)),
+         (5, New("ORD_0003", Side.BID, 94, 3, 3)),
+     ], SimulationResult(
+        [], [RejectedEvent(3, BusinessRejectionCode.UNKNOWN_ORDER_ID)],
+        BookSnapshot((Level(95, 12), Level(94, 3)), ())
+    )),
+    ([
+         (2, New("ORD_0001", Side.BID, 95, 5, 1)),
+         (3, Cancel("ORD_0003", 4)),
+         (4, New("ORD_0002", Side.BID, 95, 7, 5)),
+         (5, New("ORD_0003", Side.BID, 94, 3, 3)),
+         (6, Cancel("ORD_0003", 8)),
+     ], SimulationResult(
+        [], [RejectedEvent(3, BusinessRejectionCode.UNKNOWN_ORDER_ID)],
+        BookSnapshot((Level(95, 12),), ())
+    )),
+    ([
+         (2, New("ORD_0001", Side.BID, 95, 5, 1)),
+         (3, New("ORD_0002", Side.BID, 95, 7, 2)),
+         (4, New("ORD_0003", Side.BID, 94, 3, 6)),
+         (5, Cancel("ORD_0003", 4)),
+     ], SimulationResult(
+        [], [],
+        BookSnapshot((Level(95, 12),), ())
+    )),
+    ([
+         (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
+         (3, Cancel("ORD_0002", 5)),
+         (4, New("ORD_0002", Side.ASK, 105, 5, 3)),
+         (5, New("ORD_0003", Side.ASK, 106, 6, 4)),
+     ], SimulationResult(
+        [], [RejectedEvent(3, BusinessRejectionCode.UNKNOWN_ORDER_ID)],
+        BookSnapshot((), (Level(105, 8), Level(106, 6))),
+    )),
+    ([
+         (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
+         (3, Cancel("ORD_0002", 5)),
+         (4, New("ORD_0002", Side.ASK, 105, 5, 3)),
+         (5, New("ORD_0003", Side.ASK, 106, 6, 4)),
+         (6, Cancel("ORD_0002", 7)),
+     ], SimulationResult(
+        [], [RejectedEvent(3, BusinessRejectionCode.UNKNOWN_ORDER_ID)],
+        BookSnapshot((), (Level(105, 3), Level(106, 6))),
+    )),
+    ([
+         (2, New("ORD_0001", Side.ASK, 105, 3, 1)),
+         (3, New("ORD_0002", Side.ASK, 105, 5, 8)),
+         (4, New("ORD_0003", Side.ASK, 106, 6, 4)),
+         (5, Cancel("ORD_0002", 5)),
+     ], SimulationResult(
+        [], [],
+        BookSnapshot((), (Level(105, 3), Level(106, 6))),
+    )),
+])
+def test_cancel_priority_follows_arrival_not_timestamp(simulator, events, expected_simulation_result):
+    simulator_result = simulator.run(events)
+
+    assert simulator_result == expected_simulation_result
