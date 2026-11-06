@@ -1,10 +1,11 @@
 """Unit tests for the Order and Trade models: construction and validation."""
 
 import dataclasses
+from dataclasses import FrozenInstanceError
 
 import pytest
 
-from orderbook.order import Order, Side, Trade
+from orderbook.order import Order, Side, Trade, Level
 
 INVALID_ERROR_PRICE_MSG = "Price cannot be negative or 0"
 INVALID_ORDER_QUANTITY_ERROR_MSG = "Order quantity cannot be negative or 0"
@@ -26,6 +27,12 @@ def sample_order():
         seq_number=1
     )
 
+
+def test_level_is_immutable():
+    level = Level(100, 5)
+
+    with pytest.raises(FrozenInstanceError):
+        level.price = 100
 
 def test_valid_order_is_created_with_defaults(sample_order):
     assert sample_order.price == 100
@@ -253,7 +260,7 @@ def test_trade_is_immutable():
         timestamp=5
     )
 
-    with pytest.raises(dataclasses.FrozenInstanceError):
+    with pytest.raises(FrozenInstanceError):
         trade.quantity = 10
 
 

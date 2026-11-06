@@ -13,7 +13,11 @@ Design notes:
 """
 import heapq
 
-from orderbook.order import Side
+from orderbook.order import Side, Level
+
+
+class UnknownOrderError(Exception):
+    pass
 
 
 def _best_price(side_levels, side_heap, side_price_sign):
@@ -73,7 +77,7 @@ class OrderBook:
 
     def cancel_order(self, order_id):
         if order_id not in self.index:
-            raise ValueError("Order is not available")
+            raise UnknownOrderError("No such order")
 
         order_to_cancel = self.index[order_id]
         if order_to_cancel.side == Side.BID:
@@ -105,28 +109,29 @@ class OrderBook:
 
         return current_best_ask - current_best_bid
 
-    def depth(self, side, n):
-        if n <= 0:
+    def depth(self, side, n=None):
+        if side not in (Side.BID, Side.ASK):
+            raise ValueError("Unregistered side, side is not BID or ASK")
+
+        if n is None:
+            n = len(self.bid_levels) if side == Side.BID else len(self.ask_levels)
+
+        if n == 0:
+            return ()
+
+        if n < 0:
             raise ValueError("Invalid depth level input")
 
         depth_levels = []
 
-        if side == Side.BID:
-            side_levels = self.bid_levels
-            depth_heap = heapq.nlargest(n, side_levels)
-        elif side == Side.ASK:
-            side_levels = self.ask_levels
-            depth_heap = heapq.nsmallest(n, side_levels)
-        else:
-            raise ValueError("Unregistered side, side is not BID or ASK")
+        side_levels = self.bid_levels if side == Side.BID else self.ask_levels
+        depth_prices = heapq.nlargest(n, side_levels) if side == Side.BID else heapq.nsmallest(n, side_levels)
 
-        for price in depth_heap:
+        for price in depth_prices:
             depth_levels.append(
-                (price,
-                 sum(current_order.remaining_quantity for current_order in side_levels[price].values()))
-            )
+                Level(price, sum(current_order.remaining_quantity for current_order in side_levels[price].values())))
 
-        return depth_levels
+        return tuple(depth_levels)
 
     def get_top_order(self, side):
         if side == Side.BID:

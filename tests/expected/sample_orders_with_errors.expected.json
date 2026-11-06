@@ -1,0 +1,23 @@
+{
+  "trades": [
+    {"id": "TRD_0001", "buy_order_id": "ORD_0005", "sell_order_id": "ord_0003", "taker_order_id": "ORD_0005", "price": 104, "quantity": 6, "timestamp": 7},
+    {"id": "TRD_0002", "buy_order_id": "ORD_0002", "sell_order_id": "ORD_0006", "taker_order_id": "ORD_0006", "price": 98, "quantity": 8, "timestamp": 10},
+    {"id": "TRD_0003", "buy_order_id": "ORD_0001", "sell_order_id": "ORD_0006", "taker_order_id": "ORD_0006", "price": 95, "quantity": 3, "timestamp": 10},
+    {"id": "TRD_0004", "buy_order_id": "ORD_0001", "sell_order_id": "ORD_0009", "taker_order_id": "ORD_0009", "price": 95, "quantity": 11, "timestamp": 14},
+    {"id": "TRD_0005", "buy_order_id": "ORD_0007", "sell_order_id": "ord_0003", "taker_order_id": "ORD_0007", "price": 104, "quantity": 10, "timestamp": 15},
+    {"id": "TRD_0006", "buy_order_id": "ORD_0007", "sell_order_id": "ORD_0004", "taker_order_id": "ORD_0007", "price": 104, "quantity": 6, "timestamp": 15}
+  ],
+  "rejected_rows": [
+    {"line": 4, "reason": "duplicate_order_id"},
+    {"line": 7, "reason": "duplicate_order_id"},
+    {"line": 10, "reason": "unknown_order_id"},
+    {"line": 11, "reason": "missing_side"},
+    {"line": 13, "reason": "missing_timestamp"},
+    {"line": 15, "reason": "unknown_order_id"},
+    {"line": 16, "reason": "unknown_order_id"},
+    {"line": 19, "reason": "invalid_price"},
+    {"line": 20, "reason": "unsupported_event_type"}
+  ],
+  "final_bid_depth": [[105, 14], [95, 1]],
+  "final_ask_depth": [[106, 8]]
+}

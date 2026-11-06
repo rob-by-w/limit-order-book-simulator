@@ -1,8 +1,8 @@
 import pytest
 
-from orderbook.order import Order, Side, Trade
+from orderbook.order import Order, Side, Trade, Level
 from orderbook.book import OrderBook
-from orderbook.matching import MatchingEngine
+from orderbook.matching import MatchingEngine, DuplicateOrderIdError
 
 DUPLICATE_ORDER_ID_ERROR_MSG = "Duplicate order ID"
 
@@ -330,7 +330,7 @@ def test_incoming_order_with_duplicate_id(orderbook, incoming_order, request):
     initial_bid_depth = matching_engine.orderbook.depth(Side.BID, 10)
     initial_ask_depth = matching_engine.orderbook.depth(Side.ASK, 10)
 
-    with pytest.raises(ValueError, match=DUPLICATE_ORDER_ID_ERROR_MSG):
+    with pytest.raises(DuplicateOrderIdError, match=DUPLICATE_ORDER_ID_ERROR_MSG):
         matching_engine.submit(request.getfixturevalue(incoming_order))
 
     assert matching_engine.orderbook.best_bid() == initial_best_bid
@@ -340,10 +340,10 @@ def test_incoming_order_with_duplicate_id(orderbook, incoming_order, request):
 
 
 @pytest.mark.parametrize("orderbook, incoming_order, expected_bid_depth, expected_ask_depth", [
-    ("orderbook_with_two_resting_orders", "order_bid_id_101_5_at_101", [(101, 5), (100, 7), (98, 13)],
-     [(103, 6), (106, 2)]),
-    ("orderbook_with_two_resting_orders", "order_ask_id_201_4_at_105", [(100, 7), (98, 13)],
-     [(103, 6), (105, 4), (106, 2)])
+    ("orderbook_with_two_resting_orders", "order_bid_id_101_5_at_101", (Level(101, 5), Level(100, 7), Level(98, 13)),
+     (Level(103, 6), Level(106, 2))),
+    ("orderbook_with_two_resting_orders", "order_ask_id_201_4_at_105", (Level(100, 7), Level(98, 13)),
+     (Level(103, 6), Level(105, 4), Level(106, 2)))
 ])
 def test_no_filled_incoming_order(orderbook, incoming_order, expected_bid_depth, expected_ask_depth,
                                   request):
@@ -360,16 +360,16 @@ def test_no_filled_incoming_order(orderbook, incoming_order, expected_bid_depth,
     "orderbook, incoming_order, expected_trades, expected_bid_depth, expected_ask_depth, expected_new_top_order", [
         ("orderbook_with_two_resting_orders", "order_ask_id_202_7_at_100",
          [Trade(id="TRD_0001", buy_order_id="ORD_0001", sell_order_id="ORD_0202", taker_order_id="ORD_0202", price=100,
-                quantity=7, timestamp=202)], [(98, 13)], [(103, 6), (106, 2)], "order_bid_id_2_13_at_98"),
+                quantity=7, timestamp=202)], (Level(98, 13),), (Level(103, 6), Level(106, 2)), "order_bid_id_2_13_at_98"),
         ("orderbook_with_two_resting_orders", "order_bid_id_102_6_at_103",
          [Trade(id="TRD_0001", buy_order_id="ORD_0102", sell_order_id="ORD_0011", taker_order_id="ORD_0102", price=103,
-                quantity=6, timestamp=102)], [(100, 7), (98, 13)], [(106, 2)], "order_ask_id_12_2_at_106"),
+                quantity=6, timestamp=102)], (Level(100, 7), Level(98, 13)), (Level(106, 2),), "order_ask_id_12_2_at_106"),
         ("orderbook_with_resting_orders_at_same_price", "order_ask_id_11_6_at_103",
          [Trade(id="TRD_0001", buy_order_id="ORD_0003", sell_order_id="ORD_0011", taker_order_id="ORD_0011", price=103,
-                quantity=6, timestamp=1)], [(103, 6)], [(106, 7)], "order_bid_id_102_6_at_103"),
+                quantity=6, timestamp=1)], (Level(103, 6),), (Level(106, 7),), "order_bid_id_102_6_at_103"),
         ("orderbook_with_resting_orders_at_same_price", "order_bid_id_108_2_at_106",
          [Trade(id="TRD_0001", buy_order_id="ORD_0108", sell_order_id="ORD_0012", taker_order_id="ORD_0108", price=106,
-                quantity=2, timestamp=108)], [(103, 12)], [(106, 5)], "order_ask_id_13_5_at_106")
+                quantity=2, timestamp=108)], (Level(103, 12),), (Level(106, 5),), "order_ask_id_13_5_at_106")
     ])
 def test_match_incoming_order_with_top_order(orderbook, incoming_order, expected_trades, expected_bid_depth,
                                              expected_ask_depth, expected_new_top_order, request):
@@ -397,13 +397,13 @@ def test_match_incoming_order_with_top_order(orderbook, incoming_order, expected
                 quantity=7, timestamp=203),
           Trade(id="TRD_0002", buy_order_id="ORD_0002", sell_order_id="ORD_0203", taker_order_id="ORD_0203", price=98,
                 quantity=13, timestamp=203)
-          ], None, 103, [], [(103, 6), (106, 2)]),
+          ], None, 103, (), (Level(103, 6), Level(106, 2))),
         ("orderbook_with_two_resting_orders", "order_bid_id_103_8_at_108",
          [Trade(id="TRD_0001", buy_order_id="ORD_0103", sell_order_id="ORD_0011", taker_order_id="ORD_0103", price=103,
                 quantity=6, timestamp=103),
           Trade(id="TRD_0002", buy_order_id="ORD_0103", sell_order_id="ORD_0012", taker_order_id="ORD_0103", price=106,
                 quantity=2, timestamp=103)
-          ], 100, None, [(100, 7), (98, 13)], [])
+          ], 100, None, (Level(100, 7), Level(98, 13)), ())
     ])
 def test_take_all_resting_orders_in_orderbook(orderbook, incoming_order, expected_trades, expected_best_bid,
                                               expected_best_ask, expected_bid_depth, expected_ask_depth, request):
@@ -426,22 +426,22 @@ def test_take_all_resting_orders_in_orderbook(orderbook, incoming_order, expecte
     [
         ("orderbook_with_two_resting_orders", "order_ask_id_204_8_at_99",
          [Trade(id="TRD_0001", buy_order_id="ORD_0001", sell_order_id="ORD_0204", taker_order_id="ORD_0204", price=100,
-                quantity=7, timestamp=204)], 98, 99, [(98, 13)], [(99, 1), (103, 6), (106, 2)]),
+                quantity=7, timestamp=204)], 98, 99, (Level(98, 13),), (Level(99, 1), Level(103, 6), Level(106, 2))),
         ("orderbook_with_two_resting_orders", "order_ask_id_206_30_at_95",
          [Trade(id="TRD_0001", buy_order_id="ORD_0001", sell_order_id="ORD_0206", taker_order_id="ORD_0206", price=100,
                 quantity=7, timestamp=206),
           Trade(id="TRD_0002", buy_order_id="ORD_0002", sell_order_id="ORD_0206", taker_order_id="ORD_0206", price=98,
                 quantity=13, timestamp=206)
-          ], None, 95, [], [(95, 10), (103, 6), (106, 2)]),
+          ], None, 95, (), (Level(95, 10), Level(103, 6), Level(106, 2))),
         ("orderbook_with_two_resting_orders", "order_bid_id_104_10_at_104",
          [Trade(id="TRD_0001", buy_order_id="ORD_0104", sell_order_id="ORD_0011", taker_order_id="ORD_0104", price=103,
-                quantity=6, timestamp=104)], 104, 106, [(104, 4), (100, 7), (98, 13)], [(106, 2)]),
+                quantity=6, timestamp=104)], 104, 106, (Level(104, 4), Level(100, 7), Level(98, 13)), (Level(106, 2),)),
         ("orderbook_with_two_resting_orders", "order_bid_id_106_12_at_107",
          [Trade(id="TRD_0001", buy_order_id="ORD_0106", sell_order_id="ORD_0011", taker_order_id="ORD_0106", price=103,
                 quantity=6, timestamp=106),
           Trade(id="TRD_0002", buy_order_id="ORD_0106", sell_order_id="ORD_0012", taker_order_id="ORD_0106", price=106,
                 quantity=2, timestamp=106)
-          ], 107, None, [(107, 4), (100, 7), (98, 13)], [])
+          ], 107, None, (Level(107, 4), Level(100, 7), Level(98, 13)), ())
     ])
 def test_partial_fill_incoming_order(orderbook, incoming_order, expected_trades, expected_best_bid,
                                      expected_best_ask, expected_bid_depth, expected_ask_depth,
@@ -462,16 +462,16 @@ def test_partial_fill_incoming_order(orderbook, incoming_order, expected_trades,
 @pytest.mark.parametrize("orderbook, incoming_order, expected_trades, expected_bid_depth, expected_ask_depth", [
     ("orderbook_with_two_resting_orders", "order_ask_id_205_2_at_99",
      [Trade(id="TRD_0001", buy_order_id="ORD_0001", sell_order_id="ORD_0205", taker_order_id="ORD_0205", price=100,
-            quantity=2, timestamp=205)], [(100, 5), (98, 13)], [(103, 6), (106, 2)]),
+            quantity=2, timestamp=205)], (Level(100, 5), Level(98, 13)), (Level(103, 6), Level(106, 2))),
     ("orderbook_with_two_resting_orders", "order_bid_id_105_1_at_105",
      [Trade(id="TRD_0001", buy_order_id="ORD_0105", sell_order_id="ORD_0011", taker_order_id="ORD_0105", price=103,
-            quantity=1, timestamp=105)], [(100, 7), (98, 13)], [(103, 5), (106, 2)]),
+            quantity=1, timestamp=105)], (Level(100, 7), Level(98, 13)), (Level(103, 5), Level(106, 2))),
     ("orderbook_with_resting_orders_at_same_price", "order_ask_id_205_2_at_99",
      [Trade(id="TRD_0001", buy_order_id="ORD_0003", sell_order_id="ORD_0205", taker_order_id="ORD_0205", price=103,
-            quantity=2, timestamp=205)], [(103, 10)], [(106, 7)]),
+            quantity=2, timestamp=205)], (Level(103, 10),), (Level(106, 7),)),
     ("orderbook_with_resting_orders_at_same_price", "order_bid_id_107_1_at_106",
      [Trade(id="TRD_0001", buy_order_id="ORD_0107", sell_order_id="ORD_0012", taker_order_id="ORD_0107", price=106,
-            quantity=1, timestamp=107)], [(103, 12)], [(106, 6)])
+            quantity=1, timestamp=107)], (Level(103, 12),), (Level(106, 6),))
 ])
 def test_partial_fill_top_resting_order(orderbook, incoming_order, expected_trades, expected_bid_depth,
                                         expected_ask_depth,
@@ -500,13 +500,13 @@ def test_partial_fill_top_resting_order(orderbook, incoming_order, expected_trad
                 quantity=6, timestamp=204),
           Trade(id="TRD_0002", buy_order_id="ORD_0102", sell_order_id="ORD_0204", taker_order_id="ORD_0204", price=103,
                 quantity=2, timestamp=204)
-          ], "order_bid_id_102_6_at_103", [(103, 4)], [(106, 7)]),
+          ], "order_bid_id_102_6_at_103", (Level(103, 4),), (Level(106, 7),)),
         ("orderbook_with_resting_orders_at_same_price", "order_bid_id_109_4_at_109",
          [Trade(id="TRD_0001", buy_order_id="ORD_0109", sell_order_id="ORD_0012", taker_order_id="ORD_0109", price=106,
                 quantity=2, timestamp=109),
           Trade(id="TRD_0002", buy_order_id="ORD_0109", sell_order_id="ORD_0013", taker_order_id="ORD_0109", price=106,
                 quantity=2, timestamp=109)
-          ], "order_ask_id_13_5_at_106", [(103, 12)], [(106, 3)])
+          ], "order_ask_id_13_5_at_106", (Level(103, 12),), (Level(106, 3),))
 
     ])
 def test_fill_multiple_resting_order(orderbook, incoming_order, expected_trades, expected_top_trade, expected_bid_depth,
@@ -533,7 +533,7 @@ def test_fill_multiple_resting_order(orderbook, incoming_order, expected_trades,
                 quantity=6, timestamp=1),
           Trade(id="TRD_0002", buy_order_id="ORD_0102", sell_order_id="ORD_0205", taker_order_id="ORD_0205", price=103,
                 quantity=2, timestamp=205)
-          ], [(103, 4)], [(106, 7)]),
+          ], (Level(103, 4),), (Level(106, 7),)),
         ("orderbook_with_resting_orders_at_same_price", "order_bid_id_109_4_at_109", "order_bid_id_110_1_at_106",
          [Trade(id="TRD_0001", buy_order_id="ORD_0109", sell_order_id="ORD_0012", taker_order_id="ORD_0109", price=106,
                 quantity=2, timestamp=109),
@@ -541,7 +541,7 @@ def test_fill_multiple_resting_order(orderbook, incoming_order, expected_trades,
                 quantity=2, timestamp=109),
           Trade(id="TRD_0003", buy_order_id="ORD_0110", sell_order_id="ORD_0013", taker_order_id="ORD_0110", price=106,
                 quantity=1, timestamp=110)
-          ], [(103, 12)], [(106, 2)])
+          ], (Level(103, 12),), (Level(106, 2),))
 
     ])
 def test_multiple_incoming_orders(orderbook, incoming_order_1, incoming_order_2, expected_trades,

@@ -1,8 +1,181 @@
-"""Input events: the messages that drive the simulator.
+"""Parse an order-flow CSV into typed events (New, Cancel, Rejection).
 
-TODO (Milestone 6):
-- Define event types: NEW, CANCEL, (later) MODIFY.
-- Decide what fields each event carries (e.g. NEW needs side/price/qty/id; CANCEL needs only an id).
-- Define the input file format (CSV or JSON lines) and write a parser from raw rows to events.
-- Edge cases: malformed rows, unknown event types, bad numbers. Fail loudly or skip? Justify the choice.
+Required columns, in any order: event_type, order_id, side, price, quantity,
+timestamp. Extra columns are ignored.
+
+Events:
+- NEW: needs order_id, side (BID/ASK), price, quantity, timestamp.
+- CANCEL: needs order_id and timestamp only.
+- Anything else (including MODIFY, for now) is rejected as unsupported.
+
+Normalization: fields are stripped, and whitespace-only counts as missing.
+event_type and side are case-insensitive; order_id keeps its case.
+
+Validation: price is any integer (zero and negative allowed, for spread
+products like calendar rolls); quantity >= 1; timestamp >= 0.
+
+Errors: a missing file or header column raises (nothing in the file can be
+trusted). A bad row becomes a Rejection with a RejectionCode and parsing
+continues.
+
+Returns a list of (line_number, event) tuples. line_number is the physical
+file line (header is line 1), so blank lines don't shift it.
 """
+import csv
+import re
+from dataclasses import dataclass
+from enum import StrEnum
+
+from orderbook.order import Side
+
+
+class RejectionCode(StrEnum):
+    MISSING_EVENT_TYPE = "missing_event_type"
+    MISSING_ORDER_ID = "missing_order_id"
+    MISSING_SIDE = "missing_side"
+    MISSING_PRICE = "missing_price"
+    MISSING_QUANTITY = "missing_quantity"
+    MISSING_TIMESTAMP = "missing_timestamp"
+
+    INVALID_SIDE = "invalid_side"
+    INVALID_PRICE = "invalid_price"
+    INVALID_QUANTITY = "invalid_quantity"
+    INVALID_TIMESTAMP = "invalid_timestamp"
+
+    UNSUPPORTED_EVENT_TYPE = "unsupported_event_type"
+
+
+@dataclass(frozen=True)
+class New:
+    id: str
+    side: Side
+    price: int
+    order_quantity: int
+    timestamp: int
+
+
+@dataclass(frozen=True)
+class Cancel:
+    id: str
+    timestamp: int
+
+
+@dataclass(frozen=True)
+class Rejection:
+    reason: RejectionCode
+
+
+def normalize_field_value(raw_value, upper=False):
+    if raw_value is None:
+        return ""
+
+    return str(raw_value).strip().upper() if upper else str(raw_value).strip()
+
+
+def is_valid_integer(input_string, minimum_value=None):
+    if re.fullmatch(r'^[+-]?[0-9]+$', str(input_string)):
+        output = int(input_string)
+
+        if minimum_value is not None:
+            if output >= minimum_value:
+                return True
+        else:
+            return True
+
+    return False
+
+
+def read_order_flow_csv(order_flow_csv):
+    output = []
+
+    required_fields = ['event_type', 'order_id', 'side', 'price', 'quantity', 'timestamp']
+
+    with open(order_flow_csv, 'r') as order_flow_file:
+        if not [line for line in order_flow_file]:
+            return output
+
+    with open(order_flow_csv, newline='') as order_flow_file:
+        order_reader = csv.DictReader(order_flow_file)
+
+        if len(order_reader.fieldnames) != len(set(order_reader.fieldnames)):
+            raise KeyError(
+                f"Order flow csv has duplicate fields: "
+                f"{', '.join([field for field in order_reader.fieldnames if order_reader.fieldnames.count(field) > 1])}")
+
+        if not (set(order_reader.fieldnames) >= set(required_fields)):
+            raise KeyError(
+                f"Missing fields in order flow csv: "
+                f"{', '.join([field for field in required_fields if field not in order_reader.fieldnames])}")
+
+        for row in order_reader:
+            output.append((order_reader.line_num, create_event(row)))
+
+    return output
+
+
+def create_event(event_row):
+    event_type = normalize_field_value(event_row['event_type'], True)
+    event_order_id = normalize_field_value(event_row['order_id'], False)
+    event_side = normalize_field_value(event_row['side'], True)
+    event_price = normalize_field_value(event_row['price'])
+    event_quantity = normalize_field_value(event_row['quantity'])
+    event_timestamp = normalize_field_value(event_row['timestamp'])
+
+    if not event_type:
+        return Rejection(RejectionCode.MISSING_EVENT_TYPE)
+
+    if event_type not in ["NEW", "CANCEL"]:
+        return Rejection(RejectionCode.UNSUPPORTED_EVENT_TYPE)
+
+    if not event_order_id:
+        return Rejection(RejectionCode.MISSING_ORDER_ID)
+
+    if not event_timestamp:
+        return Rejection(RejectionCode.MISSING_TIMESTAMP)
+    else:
+        if is_valid_integer(event_timestamp, 0):
+            event_timestamp = int(event_timestamp)
+
+        else:
+            return Rejection(RejectionCode.INVALID_TIMESTAMP)
+
+    if event_type == 'NEW':
+        if not event_side:
+            return Rejection(RejectionCode.MISSING_SIDE)
+        else:
+            if event_side not in ["BID", "ASK"]:
+                return Rejection(RejectionCode.INVALID_SIDE)
+
+            event_side = Side.BID if event_side.strip().upper() == "BID" else Side.ASK
+
+        if not event_price:
+            return Rejection(RejectionCode.MISSING_PRICE)
+        else:
+            if is_valid_integer(event_price):
+                event_price = int(event_price)
+            else:
+                return Rejection(RejectionCode.INVALID_PRICE)
+
+        if not event_quantity:
+            return Rejection(RejectionCode.MISSING_QUANTITY)
+        else:
+            if is_valid_integer(event_quantity, 1):
+                event_quantity = int(event_quantity)
+
+            else:
+                return Rejection(RejectionCode.INVALID_QUANTITY)
+
+        return New(
+            id=event_order_id,
+            side=event_side,
+            price=event_price,
+            order_quantity=event_quantity,
+            timestamp=event_timestamp
+        )
+    elif event_type == 'CANCEL':
+        return Cancel(
+            id=event_order_id,
+            timestamp=event_timestamp,
+        )
+    else:
+        return Rejection(RejectionCode.UNSUPPORTED_EVENT_TYPE)
