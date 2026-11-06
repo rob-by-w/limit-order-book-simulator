@@ -58,7 +58,7 @@ def test_booksnapshot_immutability_after_a_run(simulator):
     simulator_result = simulator.run(events)
 
     with pytest.raises(FrozenInstanceError):
-        simulator_result.final_book_state.bids = (Level(96, 10), Level(100, 3))
+        simulator_result.book_state.bids = (Level(96, 10), Level(100, 3))
 
 
 def test_booksnapshot_level_immutability_after_a_run(simulator):
@@ -69,7 +69,7 @@ def test_booksnapshot_level_immutability_after_a_run(simulator):
     simulator_result = simulator.run(events)
 
     with pytest.raises(FrozenInstanceError):
-        simulator_result.final_book_state.bids[0].price = 105
+        simulator_result.book_state.bids[0].price = 105
 
 
 def test_booksnapshot_bids_and_ask_are_tuples_after_a_run(simulator):
@@ -80,8 +80,8 @@ def test_booksnapshot_bids_and_ask_are_tuples_after_a_run(simulator):
 
     simulator_result = simulator.run(events)
 
-    assert type(simulator_result.final_book_state.bids) is tuple
-    assert type(simulator_result.final_book_state.asks) is tuple
+    assert type(simulator_result.book_state.bids) is tuple
+    assert type(simulator_result.book_state.asks) is tuple
 
 
 def test_add_new_order(simulator):
@@ -93,7 +93,7 @@ def test_add_new_order(simulator):
 
     assert simulator_result.trades == []
     assert simulator_result.rejections == []
-    assert simulator_result.final_book_state == BookSnapshot((Level(95, 15),), ())
+    assert simulator_result.book_state == BookSnapshot((Level(95, 15),), ())
 
 
 @pytest.mark.parametrize("events, expected_simulation_result", [
@@ -260,7 +260,7 @@ def test_cancel_resting_order(simulator):
 
     assert simulator_result.trades == []
     assert simulator_result.rejections == []
-    assert simulator_result.final_book_state == BookSnapshot((), ())
+    assert simulator_result.book_state == BookSnapshot((), ())
 
 
 @pytest.mark.parametrize("events, expected_simulation_result", [
@@ -569,13 +569,13 @@ def test_rejection_duplicate_order_id(simulator, events, expected_simulation_res
          ], SimulationResult(
             trades=[],
             rejections=[RejectedEvent(3, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
-            final_book_state=BookSnapshot((Level(95, 5),), ())),
+            book_state=BookSnapshot((Level(95, 5),), ())),
          [
              (2, New("ORD_0001", Side.BID, 101, 15, 5)),
          ], SimulationResult(
                 trades=[],
                 rejections=[RejectedEvent(2, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
-                final_book_state=BookSnapshot((Level(95, 5),), ())),
+                book_state=BookSnapshot((Level(95, 5),), ())),
         ),
         ([
              (2, New("ORD_0001", Side.BID, 95, 5, 1)),
@@ -583,13 +583,13 @@ def test_rejection_duplicate_order_id(simulator, events, expected_simulation_res
          ], SimulationResult(
             trades=[],
             rejections=[],
-            final_book_state=BookSnapshot((), ())),
+            book_state=BookSnapshot((), ())),
          [
              (2, New("ORD_0001", Side.BID, 101, 15, 5)),
          ], SimulationResult(
                 trades=[],
                 rejections=[RejectedEvent(2, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
-                final_book_state=BookSnapshot((), ())),
+                book_state=BookSnapshot((), ())),
         ),
         ([
              (2, New("ORD_0003", Side.ASK, 100, 12, 1)),
@@ -598,14 +598,14 @@ def test_rejection_duplicate_order_id(simulator, events, expected_simulation_res
          ], SimulationResult(
             trades=[Trade("TRD_0001", "ORD_0004", "ORD_0003", "ORD_0004", 100, 12, 2)],
             rejections=[],
-            final_book_state=BookSnapshot((Level(101, 3),), ())),
+            book_state=BookSnapshot((Level(101, 3),), ())),
          [
              (4, New("ORD_0003", Side.ASK, 100, 12, 3)),
              (5, New("ORD_0005", Side.ASK, 99, 3, 5))
          ], SimulationResult(
                 trades=[Trade("TRD_0002", "ORD_0004", "ORD_0005", "ORD_0005", 101, 3, 5)],
                 rejections=[RejectedEvent(4, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
-                final_book_state=BookSnapshot((), ())
+                book_state=BookSnapshot((), ())
             )
         )
     ])
@@ -627,7 +627,7 @@ def test_rejection_duplicate_order_id_multiple_run(simulator, events_run_1, simu
         trades=[],
         rejections=[RejectedEvent(2, RejectionCode.MISSING_ORDER_ID),
                     RejectedEvent(4, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
-        final_book_state=BookSnapshot((), (Level(100, 12),)))
+        book_state=BookSnapshot((), (Level(100, 12),)))
     ),
     ([
          (2, New("ORD_0001", Side.ASK, 105, 5, 1)),
@@ -638,7 +638,7 @@ def test_rejection_duplicate_order_id_multiple_run(simulator, events_run_1, simu
         trades=[Trade("TRD_0001", "ORD_0002", "ORD_0001", "ORD_0002", 105, 5, 3)],
         rejections=[RejectedEvent(3, RejectionCode.INVALID_SIDE),
                     RejectedEvent(5, BusinessRejectionCode.UNKNOWN_ORDER_ID)],
-        final_book_state=BookSnapshot((Level(106, 2),), ()))
+        book_state=BookSnapshot((Level(106, 2),), ()))
     ),
     ([
          (2, New("ORD_0001", Side.BID, 95, 6, 1)),
@@ -651,7 +651,7 @@ def test_rejection_duplicate_order_id_multiple_run(simulator, events_run_1, simu
         rejections=[RejectedEvent(3, BusinessRejectionCode.DUPLICATE_ORDER_ID),
                     RejectedEvent(5, BusinessRejectionCode.UNKNOWN_ORDER_ID),
                     RejectedEvent(6, RejectionCode.MISSING_TIMESTAMP)],
-        final_book_state=BookSnapshot((), (Level(94, 3),)))
+        book_state=BookSnapshot((), (Level(94, 3),)))
     ),
     ([(2, New("ORD_0003", Side.ASK, 100, 12, 1)),
       (3, New("ORD_0004", Side.BID, 101, 15, 2)),
@@ -666,7 +666,7 @@ def test_rejection_duplicate_order_id_multiple_run(simulator, events_run_1, simu
          rejections=[RejectedEvent(4, RejectionCode.UNSUPPORTED_EVENT_TYPE),
                      RejectedEvent(5, BusinessRejectionCode.DUPLICATE_ORDER_ID),
                      RejectedEvent(7, RejectionCode.MISSING_QUANTITY)],
-         final_book_state=BookSnapshot((), ())),
+         book_state=BookSnapshot((), ())),
      )
 ])
 def test_rejection_parse_time_and_business_rejections(simulator, events, simulation_result):
@@ -676,7 +676,7 @@ def test_rejection_parse_time_and_business_rejections(simulator, events, simulat
 
 def test_run_empty_events(simulator):
     simulator_result = simulator.run([])
-    assert simulator_result == SimulationResult(trades=[], rejections=[], final_book_state=BookSnapshot((), ()))
+    assert simulator_result == SimulationResult(trades=[], rejections=[], book_state=BookSnapshot((), ()))
 
 
 @pytest.mark.parametrize(
@@ -685,11 +685,11 @@ def test_run_empty_events(simulator):
         ([], SimulationResult(
             trades=[],
             rejections=[],
-            final_book_state=BookSnapshot((), ())),
+            book_state=BookSnapshot((), ())),
          [], SimulationResult(
                 trades=[],
                 rejections=[],
-                final_book_state=BookSnapshot((), ())),
+                book_state=BookSnapshot((), ())),
          ),
         ([
              (2, New("ORD_0001", Side.BID, 95, 15, 1)),
@@ -697,13 +697,13 @@ def test_run_empty_events(simulator):
          ], SimulationResult(
             trades=[Trade("TRD_0001", "ORD_0001", "ORD_0002", "ORD_0002", 95, 6, 2)],
             rejections=[],
-            final_book_state=BookSnapshot((Level(95, 9),), ())),
+            book_state=BookSnapshot((Level(95, 9),), ())),
          [
              (2, New("ORD_0003", Side.ASK, 94, 10, 3))
          ], SimulationResult(
                 trades=[Trade("TRD_0002", "ORD_0001", "ORD_0003", "ORD_0003", 95, 9, 3)],
                 rejections=[],
-                final_book_state=BookSnapshot((), (Level(94, 1),))),
+                book_state=BookSnapshot((), (Level(94, 1),))),
         ),
         ([
              (2, New("ORD_0001", Side.ASK, 101, 8, 1)),
@@ -711,13 +711,13 @@ def test_run_empty_events(simulator):
          ], SimulationResult(
             trades=[Trade("TRD_0001", "ORD_0002", "ORD_0001", "ORD_0002", 101, 8, 2)],
             rejections=[],
-            final_book_state=BookSnapshot((Level(101, 2),), ())),
+            book_state=BookSnapshot((Level(101, 2),), ())),
          [
              (2, New("ORD_0003", Side.ASK, 103, 7, 3))
          ], SimulationResult(
                 trades=[],
                 rejections=[],
-                final_book_state=BookSnapshot((Level(101, 2),), (Level(103, 7),)))
+                book_state=BookSnapshot((Level(101, 2),), (Level(103, 7),)))
         ),
         ([
              (2, New("ORD_0001", Side.BID, 95, 15, 1)),
@@ -725,38 +725,38 @@ def test_run_empty_events(simulator):
          ], SimulationResult(
             trades=[Trade("TRD_0001", "ORD_0001", "ORD_0002", "ORD_0002", 95, 6, 2)],
             rejections=[],
-            final_book_state=BookSnapshot((Level(95, 9),), ())),
+            book_state=BookSnapshot((Level(95, 9),), ())),
          [], SimulationResult(
                 trades=[],
                 rejections=[],
-                final_book_state=BookSnapshot((Level(95, 9),), ())),
+                book_state=BookSnapshot((Level(95, 9),), ())),
         ),
         ([
              (2, New("ORD_0001", Side.BID, 95, 15, 1))
          ], SimulationResult(
             trades=[],
             rejections=[],
-            final_book_state=BookSnapshot((Level(95, 15),), ())),
+            book_state=BookSnapshot((Level(95, 15),), ())),
          [
              (2, New("ORD_0001", Side.BID, 96, 7, 3))
          ], SimulationResult(
                 trades=[],
                 rejections=[RejectedEvent(2, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
-                final_book_state=BookSnapshot((Level(95, 15),), ())),
+                book_state=BookSnapshot((Level(95, 15),), ())),
         ),
         ([
              (2, New("ORD_0001", Side.ASK, 106, 12, 1))
          ], SimulationResult(
             trades=[],
             rejections=[],
-            final_book_state=BookSnapshot((), (Level(106, 12),))),
+            book_state=BookSnapshot((), (Level(106, 12),))),
          [
              (2, New("ORD_0001", Side.BID, 108, 7, 2)),
              (3, New("ORD_0002", Side.BID, 108, 7, 2))
          ], SimulationResult(
                 trades=[Trade("TRD_0001", "ORD_0002", "ORD_0001", "ORD_0002", 106, 7, 2)],
                 rejections=[RejectedEvent(2, BusinessRejectionCode.DUPLICATE_ORDER_ID)],
-                final_book_state=BookSnapshot((), (Level(106, 5),))),
+                book_state=BookSnapshot((), (Level(106, 5),))),
         ),
     ])
 def test_multiple_runs(simulator, events_run_1, simulation_result_1, events_run_2, simulation_result_2):
@@ -776,7 +776,7 @@ def test_multiple_runs(simulator, events_run_1, simulation_result_1, events_run_
      ], SimulationResult(
         trades=[Trade("TRD_0001", "ORD_0002", "ORD_0001", "ORD_0002", 100, 12, 1)],
         rejections=[RejectedEvent(2, RejectionCode.MISSING_ORDER_ID)],
-        final_book_state=BookSnapshot((), ()))
+        book_state=BookSnapshot((), ()))
     ), ([
             (2, New("ORD_0001", Side.BID, 95, 5, 1)),
             (3, New("ORD_0002", Side.BID, 95, 7, 2)),
@@ -788,7 +788,7 @@ def test_multiple_runs(simulator, events_run_1, simulation_result_1, events_run_
             Trade("TRD_0002", "ORD_0002", "ORD_0004", "ORD_0004", 95, 3, 4)
         ],
         rejections=[],
-        final_book_state=BookSnapshot((Level(95, 4), Level(94, 3)), ()))
+        book_state=BookSnapshot((Level(95, 4), Level(94, 3)), ()))
     ),
 ])
 def test_two_simulators_give_same_result(events, simulation_result):
@@ -827,7 +827,7 @@ def test_run_type_error(simulator, events):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot((Level(99, 7), Level(98, 15)), ()))
+        book_state=BookSnapshot((Level(99, 7), Level(98, 15)), ()))
     ),
     ([
          (2, New("ORD_0001", Side.ASK, 98, 3, 1)),
@@ -838,7 +838,7 @@ def test_run_type_error(simulator, events):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot((), (Level(98, 15), Level(99, 7))))
+        book_state=BookSnapshot((), (Level(98, 15), Level(99, 7))))
     ),
     ([
          (2, New("ORD_0001", Side.BID, 98, 3, 1)),
@@ -853,7 +853,7 @@ def test_run_type_error(simulator, events):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot((Level(99, 7), Level(98, 15)), (Level(103, 14), Level(105, 12))))
+        book_state=BookSnapshot((Level(99, 7), Level(98, 15)), (Level(103, 14), Level(105, 12))))
     ),
     ([
          (2, New("ORD_0001", Side.BID, 98, 3, 1)),
@@ -865,7 +865,7 @@ def test_run_type_error(simulator, events):
      ], SimulationResult(
         trades=[Trade("TRD_0001", "ORD_0004", "ORD_0006", "ORD_0006", 99, 2, 6)],
         rejections=[],
-        final_book_state=BookSnapshot((Level(99, 5), Level(98, 15)), ()))
+        book_state=BookSnapshot((Level(99, 5), Level(98, 15)), ()))
     ),
     ([
          (2, New("ORD_0001", Side.ASK, 98, 3, 1)),
@@ -877,7 +877,7 @@ def test_run_type_error(simulator, events):
      ], SimulationResult(
         trades=[Trade("TRD_0001", "ORD_0006", "ORD_0001", "ORD_0006", 98, 2, 6)],
         rejections=[],
-        final_book_state=BookSnapshot((), (Level(98, 13), Level(99, 7))))
+        book_state=BookSnapshot((), (Level(98, 13), Level(99, 7))))
     ),
     ([
          (2, New("ORD_0001", Side.BID, 98, 3, 1)),
@@ -897,7 +897,7 @@ def test_run_type_error(simulator, events):
             Trade("TRD_0002", "ORD_0011", "ORD_0003", "ORD_0011", 103, 4, 11)
         ],
         rejections=[],
-        final_book_state=BookSnapshot((Level(99, 2), Level(98, 15)), (Level(103, 10), Level(105, 12))))
+        book_state=BookSnapshot((Level(99, 2), Level(98, 15)), (Level(103, 10), Level(105, 12))))
     ),
 ])
 def test_simulator_result_depth_aggregation(simulator, events, simulation_result):
@@ -914,7 +914,7 @@ def test_simulator_result_depth_aggregation(simulator, events, simulation_result
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot((Level(100, 5), Level(99, 6), Level(98, 3), Level(95, 7)), ()))
+        book_state=BookSnapshot((Level(100, 5), Level(99, 6), Level(98, 3), Level(95, 7)), ()))
     ),
     ([
          (2, New("ORD_0001", Side.ASK, 98, 3, 1)),
@@ -924,7 +924,7 @@ def test_simulator_result_depth_aggregation(simulator, events, simulation_result
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot((), (Level(96, 7), Level(98, 3), Level(99, 6), Level(100, 5))))
+        book_state=BookSnapshot((), (Level(96, 7), Level(98, 3), Level(99, 6), Level(100, 5))))
     ),
     ([
          (2, New("ORD_0001", Side.BID, 98, 3, 1)),
@@ -937,7 +937,7 @@ def test_simulator_result_depth_aggregation(simulator, events, simulation_result
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (Level(100, 5), Level(99, 6), Level(98, 3)),
             (Level(105, 4), Level(107, 11), Level(108, 18), Level(109, 3))
         ))
@@ -956,7 +956,7 @@ def test_simulator_result_depth_order(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (Level(97, 7), Level(95, 3), Level(92, 5)),
             ()
         ))
@@ -970,7 +970,7 @@ def test_simulator_result_depth_order(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (Level(101, 2), Level(99, 6), Level(97, 7), Level(95, 3), Level(92, 5)),
             ()
         ))
@@ -986,7 +986,7 @@ def test_simulator_result_depth_order(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (Level(101, 2), Level(99, 6), Level(97, 7), Level(96, 10), Level(95, 3), Level(94, 14), Level(92, 5)),
             ()
         ))
@@ -998,7 +998,7 @@ def test_simulator_result_depth_order(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (),
             (Level(104, 7), Level(105, 13), Level(111, 15))
         ))
@@ -1012,7 +1012,7 @@ def test_simulator_result_depth_order(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (),
             (Level(102, 8), Level(104, 7), Level(105, 13), Level(107, 6), Level(111, 15))
         ))
@@ -1028,7 +1028,7 @@ def test_simulator_result_depth_order(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (),
             (Level(102, 8), Level(104, 7), Level(105, 13), Level(107, 6), Level(109, 12), Level(111, 15), Level(113, 7))
         ))
@@ -1051,7 +1051,7 @@ def test_simulator_result_depth_order(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=
+        book_state=
         BookSnapshot(
             (Level(101, 2), Level(99, 6), Level(97, 7), Level(96, 10), Level(95, 3), Level(94, 14), Level(92, 5)),
             (Level(102, 8), Level(104, 7), Level(105, 13), Level(107, 6), Level(109, 12), Level(111, 15), Level(113, 7))
@@ -1072,7 +1072,7 @@ def test_simulator_result_depth_level(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (Level(97, 7), Level(95, 3), Level(92, 5)),
             ()
         ))
@@ -1084,7 +1084,7 @@ def test_simulator_result_depth_level(simulator, events, simulation_result):
      ], SimulationResult(
         trades=[],
         rejections=[],
-        final_book_state=BookSnapshot(
+        book_state=BookSnapshot(
             (),
             (Level(104, 7), Level(105, 13), Level(111, 15))
         ))

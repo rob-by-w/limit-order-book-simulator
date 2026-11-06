@@ -37,7 +37,7 @@ class BookSnapshot:
 class SimulationResult:
     trades: list[Trade] = field(default_factory=list)
     rejections: list[RejectedEvent] = field(default_factory=list)
-    final_book_state: BookSnapshot = field(default_factory=BookSnapshot)
+    book_state: BookSnapshot = field(default_factory=BookSnapshot)
 
 
 class Simulator:
@@ -68,7 +68,7 @@ class Simulator:
         return SimulationResult(
             trades=trade_list,
             rejections=rejection_list,
-            final_book_state=BookSnapshot(self.order_book.depth(Side.BID), self.order_book.depth(Side.ASK))
+            book_state=BookSnapshot(self.order_book.depth(Side.BID), self.order_book.depth(Side.ASK))
         )
 
     def _handle_new(self, line_number, new_order_event: New, trade_list, rejection_list) -> None:
