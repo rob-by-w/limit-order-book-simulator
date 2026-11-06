@@ -1,11 +1,31 @@
-"""Simulator: feeds a stream of events into the book and collects output.
+"""Simulator: feeds parsed events into the order book and collects the output.
 
-TODO (Milestone 6):
-- Read events in order (sequence matters: it defines time priority).
-- Dispatch each event to the book / matching engine.
-- Collect and expose emitted trades.
-- Optionally print/log top-of-book after each event.
-- Provide a command-line entry point that takes a path to a sample stream in data/.
+run() takes (line_number, event) tuples, as produced by read_order_flow_csv,
+and returns a SimulationResult for that call only: the trades, the rejections,
+and a BookSnapshot of the book afterward. The book, the order-id registry and
+the sequence counter persist across calls, so run() can be called repeatedly.
+
+Dispatch:
+- New: rejected if the id was already seen, otherwise sent to the matching engine.
+- Cancel: removes a resting order straight from the book (no matching involved);
+  an unknown or already-finished id is rejected.
+- Rejection: a parse-time rejection is passed through with its line number.
+- Any other event type raises TypeError.
+
+Priority: orders are sequenced by arrival, not by timestamp. Timestamps come
+from the sender, are informational, and may go backwards. Within a price
+level the earlier arrival fills first, and a trade carries the aggressor's
+timestamp.
+
+Order ids are unique per session: a reused id is rejected as a duplicate even
+if the earlier order was filled or cancelled. A rejected event never changes
+the book or consumes a sequence number.
+
+Rejections are reported as RejectedEvent(line_number, reason), where reason is
+a parser RejectionCode or a simulator BusinessRejectionCode.
+
+BookSnapshot is an immutable L2 view: bids highest price first, asks lowest
+price first, with total quantity per level.
 """
 from dataclasses import dataclass, field
 from enum import StrEnum
