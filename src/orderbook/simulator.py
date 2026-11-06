@@ -60,7 +60,7 @@ class Simulator:
                     self._handle_cancel(line_number, event, rejection_list)
 
                 case Rejection():
-                    self._handle_reject(line_number, event, rejection_list)
+                    self._handle_rejection(line_number, event, rejection_list)
 
                 case _:
                     raise TypeError(f"Unexpected event type: {event}")
@@ -96,5 +96,5 @@ class Simulator:
         except UnknownOrderError:
             rejection_list.append(RejectedEvent(line_number, BusinessRejectionCode.UNKNOWN_ORDER_ID))
 
-    def _handle_reject(self, line_number, event, rejection_list) -> None:
+    def _handle_rejection(self, line_number, event, rejection_list) -> None:
         rejection_list.append(RejectedEvent(line_number, event.reason))
