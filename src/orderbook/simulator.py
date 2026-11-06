@@ -17,8 +17,8 @@ from orderbook.order import Trade, Order, Side, Level
 
 
 class BusinessRejectionCode(StrEnum):
-    UNKNOWN_ORDER_ID = "unknown_order_id",
-    DUPLICATE_ORDER_ID = "duplicate_order_id",
+    UNKNOWN_ORDER_ID = "unknown_order_id"
+    DUPLICATE_ORDER_ID = "duplicate_order_id"
 
 
 @dataclass(frozen=True)
@@ -37,7 +37,7 @@ class BookSnapshot:
 class SimulationResult:
     trades: list[Trade] = field(default_factory=list)
     rejections: list[RejectedEvent] = field(default_factory=list)
-    book_state: BookSnapshot = field(default_factory=BookSnapshot)
+    book_state: BookSnapshot = field(default_factory=BookSnapshot((), ()))
 
 
 class Simulator:
