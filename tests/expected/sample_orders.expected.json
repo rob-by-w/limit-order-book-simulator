@@ -9,8 +9,8 @@
     {"line": 4, "reason": "duplicate_order_id"},
     {"line": 6, "reason": "duplicate_order_id"},
     {"line": 10, "reason": "missing_side"},
-    {"line": 12, "reason": "order_not_found"},
-    {"line": 13, "reason": "order_not_found"},
+    {"line": 12, "reason": "unknown_order_id"},
+    {"line": 13, "reason": "unknown_order_id"},
     {"line": 16, "reason": "invalid_price"},
     {"line": 17, "reason": "unsupported_event_type"}
   ],

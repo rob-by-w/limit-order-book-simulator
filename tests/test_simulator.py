@@ -1,8 +1,10 @@
+import json
 from dataclasses import FrozenInstanceError
+from pathlib import Path
 
 import pytest
 
-from orderbook.events import New, Cancel, RejectionCode, Rejection
+from orderbook.events import New, Cancel, RejectionCode, Rejection, read_order_flow_csv
 from orderbook.simulator import Simulator, SimulationResult, RejectedEvent, BusinessRejectionCode, BookSnapshot
 from orderbook.order import Side, Trade, Level
 
@@ -1264,3 +1266,42 @@ def test_cancel_priority_follows_arrival_not_timestamp(simulator, events, expect
     simulator_result = simulator.run(events)
 
     assert simulator_result == expected_simulation_result
+
+@pytest.mark.parametrize("input_file, expected_result_file", [
+    ("sample_orders.csv", "sample_orders.expected.json"),
+    ("sample_orders_with_errors.csv", "sample_orders_with_errors.expected.json")
+])
+def test_end_to_end(simulator, input_file, expected_result_file):
+    current_dir = Path(__file__).resolve().parents[0]
+    root_dir = Path(__file__).resolve().parents[1]
+
+    input_file = root_dir / "data" / input_file
+    input_events = read_order_flow_csv(input_file)
+    simulator_result = simulator.run(input_events)
+
+    with open(current_dir / "expected" / expected_result_file) as expected_json_file:
+        expected_output = json.load(expected_json_file)
+
+    expected_trades = [Trade(**trade) for trade in expected_output["trades"]]
+
+    expected_rejections = []
+    for rejection in expected_output["rejected_rows"]:
+        try:
+            rejection_reason = BusinessRejectionCode(rejection["reason"])
+        except ValueError:
+            rejection_reason = RejectionCode(rejection["reason"])
+
+        expected_rejections.append(
+            RejectedEvent(rejection["line"], rejection_reason)
+        )
+
+    expected_book_state = BookSnapshot(
+        tuple([Level(*depth) for depth in expected_output["final_bid_depth"]]),
+        tuple([Level(*depth) for depth in expected_output["final_ask_depth"]])
+    )
+
+    expected_result = SimulationResult(
+        expected_trades, expected_rejections, expected_book_state
+    )
+
+    assert expected_result == simulator_result
