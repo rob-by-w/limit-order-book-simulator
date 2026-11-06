@@ -13,7 +13,7 @@ from enum import StrEnum
 from orderbook.book import OrderBook, UnknownOrderError
 from orderbook.events import New, Cancel, Rejection, RejectionCode
 from orderbook.matching import MatchingEngine, DuplicateOrderIdError
-from orderbook.order import Trade, Order, Side
+from orderbook.order import Trade, Order, Side, Level
 
 
 class BusinessRejectionCode(StrEnum):
@@ -27,11 +27,17 @@ class RejectedEvent:
     reason: BusinessRejectionCode | RejectionCode
 
 
+@dataclass(frozen=True)
+class BookSnapshot:
+    bids: tuple[Level, ...]
+    asks: tuple[Level, ...]
+
+
 @dataclass
 class SimulationResult:
     trades: list[Trade] = field(default_factory=list)
     rejections: list[RejectedEvent] = field(default_factory=list)
-    final_book_state: dict = field(default_factory=dict)
+    final_book_state: BookSnapshot = field(default_factory=BookSnapshot)
 
 
 class Simulator:
@@ -62,7 +68,7 @@ class Simulator:
         return SimulationResult(
             trades=trade_list,
             rejections=rejection_list,
-            final_book_state={side: self.order_book.depth(side) for side in [Side.BID, Side.ASK]},
+            final_book_state=BookSnapshot(self.order_book.depth(Side.BID), self.order_book.depth(Side.ASK))
         )
 
     def _handle_new(self, line_number, new_order_event: New, trade_list, rejection_list) -> None:
