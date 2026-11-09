@@ -64,7 +64,7 @@ def print_output_book_state(simulation_result_book_state):
         f"{'Ask Quantity':^{col_width}}")
 
     if not bid_level and not ask_level:
-        print(f"{'':^{col_width}}|{'':^{col_width}}|{'':^{col_width}}|{'':^{col_width}}")
+        print(f"{'':^{col_width}}|{'** No Bids **':^{col_width}}|{'** No Asks **':^{col_width}}|{'':^{col_width}}")
 
     for ask in reversed(ask_level):
         print(f"{'':^{col_width}}|{'':^{col_width}}|{str(ask.price):^{col_width}}|{str(ask.quantity):^{col_width}}")
