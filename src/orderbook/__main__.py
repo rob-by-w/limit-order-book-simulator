@@ -40,7 +40,7 @@ def print_output_trades(simulation_result_trade):
 def print_output_rejections(simulation_result_rejection):
     print(f"{'-' * 3}Rejections{'-' * 3}")
     if len(simulation_result_rejection) == 0:
-        print("No rejections found, all lines are accepted")
+        print("No rejections")
     else:
         max_line_number_digit = max(len(str(rejection.line_number)) for rejection in simulation_result_rejection)
         for rejection in simulation_result_rejection:
